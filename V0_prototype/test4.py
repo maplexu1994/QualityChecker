@@ -613,8 +613,8 @@ Over threshold: {sum(1 for d in deviations if d > self.threshold)}/{len(deviatio
 # 使用示例
 if __name__ == "__main__":
     checker = QualityChecker(
-        json_file="sample_objects.json",
-        xodr_file="sample_objects.xodr",
+        json_file="../src/sample_objects.json",
+        xodr_file="../src/sample_objects.xodr",
         threshold=0.1  # 10cm阈值
     )
 

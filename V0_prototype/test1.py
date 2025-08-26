@@ -14,7 +14,6 @@ from pathlib import Path
 import math
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import matplotlib.cm as cm
 from matplotlib.colors import ListedColormap
 
 
@@ -105,7 +104,7 @@ class QualityChecker:
         xodr_road_marks = self._count_xodr_road_marks()
 
         bound_score = min(xodr_road_marks / (json_bounds * 2),
-                          1.0) if json_bounds > 0 else 1.0
+                          1.0) if json_bounds > 0 else 1.0  # 乘以2因为每个bound可能有多个lane_mark
         completeness_details['bounds'] = {
             'json_count': json_bounds,
             'xodr_count': xodr_road_marks,
@@ -149,14 +148,12 @@ class QualityChecker:
         xodr_data = self._sample_xodr_curves_and_lanes()
         xodr_points = []
         xodr_points.extend(xodr_data.get("reference_lines", []))
-        # 提取所有车道点
-        for lane_id, lane_pts in xodr_data.get("lane_boundaries", {}).items():
-            xodr_points.extend(lane_pts)
+        xodr_points.extend(xodr_data.get("lane_boundaries", []))
 
         print(f"   📍 JSON总坐标点数: {len(all_json_points)}")
         print(f"   📍 XODR采样点数: {len(xodr_points)} "
               f"(ref: {len(xodr_data.get('reference_lines', []))}, "
-              f"lanes: {sum(len(v) for v in xodr_data.get('lane_boundaries', {}).values())})")
+              f"lanes: {len(xodr_data.get('lane_boundaries', []))})")
 
         if not xodr_points:
             print("   ❌ 没有找到XODR采样点")
@@ -206,6 +203,8 @@ class QualityChecker:
     def _get_all_json_points(self) -> List[Dict]:
         """获取JSON中所有的坐标点"""
         all_points = []
+
+        # 从bounds中提取坐标点
         for bound in self.json_data.get('bounds', []):
             bound_id = bound['id']
             for pt in bound['pts']:
@@ -217,6 +216,8 @@ class QualityChecker:
                     'source': 'bound'
                 }
                 all_points.append(point)
+
+        # 也可以从objects中提取坐标点
         for obj in self.json_data.get('objects', []):
             obj_id = obj['id']
             for pt in obj.get('outline', []):
@@ -228,14 +229,13 @@ class QualityChecker:
                     'source': 'object'
                 }
                 all_points.append(point)
+
         return all_points
 
-    def _sample_xodr_curves_and_lanes(self, num_points=1000):
+    def _sample_xodr_curves_and_lanes(self, num_points=100):
         """
         采样 XODR 文件中的几何曲线 (参考线) 和车道边界 (lanes)
         返回 dict，包含 reference line 和 lanes 的点集
-
-        修正：更精确地解析车道，为每条车道生成独立的点集。
         """
         import xml.etree.ElementTree as ET
         import math
@@ -247,132 +247,77 @@ class QualityChecker:
 
         results = {
             "reference_lines": [],
-            "lane_boundaries": {}
+            "lane_boundaries": []
         }
 
-        # 存储所有道路的参考线采样点
-        road_reference_data = {}
+        # -----------------------------
+        # 1. 解析参考线 (planView/geometry)
+        # -----------------------------
+        for geometry in root.findall('.//planView/geometry'):
+            x0 = float(geometry.attrib["x"])
+            y0 = float(geometry.attrib["y"])
+            hdg = float(geometry.attrib["hdg"])
+            length = float(geometry.attrib["length"])
 
-        for road in root.findall('.//road'):
-            road_id = road.get("id")
-            s_offset = 0.0
-            road_reference_data[road_id] = []
+            geom_elem = list(geometry)[0]
+            tag = geom_elem.tag
 
-            # 1. 解析并采样参考线 (planView/geometry)
-            for geometry in road.findall('.//planView/geometry'):
-                s0 = float(geometry.attrib.get("s", 0))
-                x0 = float(geometry.attrib["x"])
-                y0 = float(geometry.attrib["y"])
-                hdg = float(geometry.attrib["hdg"])
-                length = float(geometry.attrib["length"])
+            def local_to_global(u, v):
+                x = x0 + math.cos(hdg) * u - math.sin(hdg) * v
+                y = y0 + math.sin(hdg) * u + math.cos(hdg) * v
+                return x, y
 
-                geom_elem = list(geometry)[0]
-                tag = geom_elem.tag
-
+            if tag == "line":
                 s_vals = np.linspace(0, length, num_points)
-
                 for s in s_vals:
-                    x, y, new_hdg = 0, 0, hdg
-                    if tag == "line":
-                        x = x0 + s * math.cos(hdg)
-                        y = y0 + s * math.sin(hdg)
-                    elif tag == "arc":
-                        curvature = float(geom_elem.attrib["curvature"])
-                        # 局部坐标系下的中心点
-                        x_center_loc = 0
-                        y_center_loc = -1.0 / curvature
-                        # 弧长转角度
-                        angle = s * curvature
-                        # 局部坐标
-                        x_loc = x_center_loc + (1.0 / curvature) * math.sin(angle)
-                        y_loc = y_center_loc - (1.0 / curvature) * math.cos(angle)
-                        # 转换到世界坐标
-                        x = x0 + x_loc * math.cos(hdg) - y_loc * math.sin(hdg)
-                        y = y0 + x_loc * math.sin(hdg) + y_loc * math.cos(hdg)
-                        # 新的航向角
-                        new_hdg = hdg + angle
-                    elif tag == "spiral":
-                        curv_start = float(geom_elem.attrib["curvStart"])
-                        curv_end = float(geom_elem.attrib["curvEnd"])
+                    results["reference_lines"].append(local_to_global(s, 0))
 
-                        # 局部坐标系
-                        def spiral_coords(s_loc):
-                            theta = curv_start * s_loc + (curv_end - curv_start) * s_loc ** 2 / (2 * length)
-                            # 简化积分近似
-                            x_loc = s_loc * math.cos(theta)
-                            y_loc = s_loc * math.sin(theta)
-                            return x_loc, y_loc, theta
+            elif tag == "arc":
+                curvature = float(geom_elem.attrib["curvature"])
+                radius = 1.0 / curvature if curvature != 0 else 1e6
+                angle_vals = np.linspace(0, length * curvature, num_points)
+                for angle in angle_vals:
+                    u = radius * math.sin(angle)
+                    v = radius * (1 - math.cos(angle))
+                    results["reference_lines"].append(local_to_global(u, v))
 
-                        x_loc, y_loc, new_hdg_loc = spiral_coords(s)
-                        x = x0 + x_loc * math.cos(hdg) - y_loc * math.sin(hdg)
-                        y = y0 + x_loc * math.sin(hdg) + y_loc * math.cos(hdg)
-                        new_hdg = hdg + new_hdg_loc
+            elif tag == "spiral":
+                curv_start = float(geom_elem.attrib["curvStart"])
+                curv_end = float(geom_elem.attrib["curvEnd"])
+                s_vals = np.linspace(0, length, num_points)
+                for s in s_vals:
+                    curvature = curv_start + (curv_end - curv_start) * (s / length)
+                    theta = curvature * s / 2.0
+                    u = s * math.cos(theta)
+                    v = s * math.sin(theta)
+                    results["reference_lines"].append(local_to_global(u, v))
 
-                    elif tag == "paramPoly3":
-                        aU, bU, cU, dU = [float(geom_elem.attrib.get(k, 0)) for k in ["aU", "bU", "cU", "dU"]]
-                        aV, bV, cV, dV = [float(geom_elem.attrib.get(k, 0)) for k in ["aV", "bV", "cV", "dV"]]
+            elif tag == "paramPoly3":
+                aU, bU, cU, dU = [float(geom_elem.attrib.get(k, 0)) for k in ["aU", "bU", "cU", "dU"]]
+                aV, bV, cV, dV = [float(geom_elem.attrib.get(k, 0)) for k in ["aV", "bV", "cV", "dV"]]
+                p_range = geom_elem.attrib.get("pRange", "normalized")
+                if p_range == "arcLength":
+                    t_vals = np.linspace(0, length, num_points)
+                else:
+                    t_vals = np.linspace(0, 1, num_points)
+                for t in t_vals:
+                    u = aU + bU * t + cU * t ** 2 + dU * t ** 3
+                    v = aV + bV * t + cV * t ** 2 + dV * t ** 3
+                    results["reference_lines"].append(local_to_global(u, v))
 
-                        # 假设 t = s / length
-                        t = s / length
-                        u = aU + bU * t + cU * t ** 2 + dU * t ** 3
-                        v = aV + bV * t + cV * t ** 2 + dV * t ** 3
-                        x_loc = u
-                        y_loc = v
+        # -----------------------------
+        # 2. 解析车道边界 (lanes)
+        # -----------------------------
+        for lane_boundary in root.findall('.//lane/roadMark'):
+            # NOTE: 这里我们简化，只用 roadMark 的 sOffset 和宽度来近似车道边界
+            # 如果需要完整几何，可以进一步解析 <border> / <width>
+            s_offset = float(lane_boundary.attrib.get("sOffset", 0))
+            width = float(lane_boundary.attrib.get("width", 0))
 
-                        x = x0 + x_loc * math.cos(hdg) - y_loc * math.sin(hdg)
-                        y = y0 + x_loc * math.sin(hdg) + y_loc * math.cos(hdg)
-                        # TODO: 航向角计算需要一阶导数，此处简化
-                        new_hdg = hdg
-
-                    road_reference_data[road_id].append({'s': s0 + s, 'point': (x, y), 'hdg': new_hdg})
-                    results["reference_lines"].append((x, y))
-
-            # 2. 解析车道 (lanes)
-            lane_sections = road.findall('.//lanes/laneSection')
-            for section in lane_sections:
-                s_start_section = float(section.attrib.get('s', 0))
-
-                for lane in section.findall('.//lane'):
-                    lane_id = int(lane.attrib["id"])
-                    if lane_id == 0 or lane.attrib.get("type") != "driving":
-                        continue
-
-                    lane_pts = []
-
-                    # 查找车道宽度多项式
-                    width_element = lane.find('width')
-                    if width_element is None:
-                        a, b, c, d = 3.5, 0, 0, 0
-                    else:
-                        a = float(width_element.attrib.get('a', 0))
-                        b = float(width_element.attrib.get('b', 0))
-                        c = float(width_element.attrib.get('c', 0))
-                        d = float(width_element.attrib.get('d', 0))
-
-                    # 遍历参考线点，计算车道边界点
-                    ref_data_in_section = [d for d in road_reference_data.get(road_id, []) if d['s'] >= s_start_section]
-
-                    for ref_data in ref_data_in_section:
-                        s_rel = ref_data['s'] - s_start_section
-                        ref_pt = ref_data['point']
-                        ref_hdg = ref_data['hdg']
-
-                        # 根据多项式计算当前宽度
-                        lane_width = a + b * s_rel + c * s_rel ** 2 + d * s_rel ** 3
-
-                        # 计算偏移方向
-                        offset_factor = -1 if lane_id < 0 else 1
-
-                        # 垂直于切线方向的偏移
-                        perp_angle = ref_hdg + math.pi / 2
-
-                        offset_x = lane_width * math.cos(perp_angle) * offset_factor
-                        offset_y = lane_width * math.sin(perp_angle) * offset_factor
-
-                        lane_pts.append((ref_pt[0] + offset_x, ref_pt[1] + offset_y))
-
-                    if lane_pts:
-                        results["lane_boundaries"][f"road_{road_id}_lane_{lane_id}"] = lane_pts
+            # 车道边界点 (这里只给简单的平移示例，真实情况需要跟随 reference line 曲线计算)
+            for ref_pt in results["reference_lines"]:
+                x, y = ref_pt
+                results["lane_boundaries"].append((x, y + width))
 
         return results
 
@@ -381,8 +326,7 @@ class QualityChecker:
         data = self._sample_xodr_curves_and_lanes()
         points = []
         points.extend(data.get("reference_lines", []))
-        for lane_id, lane_pts in data.get("lane_boundaries", {}).items():
-            points.extend(lane_pts)
+        points.extend(data.get("lane_boundaries", []))
         return points
 
     def _find_nearest_distance_to_xodr(self, json_point: Dict, xodr_points: List[Tuple[float, float]]) -> float:
@@ -402,22 +346,29 @@ class QualityChecker:
         """
         print("\n🎨 Generating visualization charts...")
 
+        # Get data
         all_json_points = self._get_all_json_points()
         xodr_sample_points = self._sample_xodr_curves_and_lanes()
 
+        # Create figure
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
 
+        # Left plot: Overall distribution
         self._plot_overall_distribution(ax1, all_json_points, xodr_sample_points)
+
+        # Right plot: Deviation analysis
         self._plot_deviation_analysis(ax2, all_json_points, xodr_sample_points)
 
         plt.tight_layout()
 
+        # Save image
         if save_path is None:
             save_path = self.json_file.parent / f"{self.json_file.stem}_visualization.png"
 
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         print(f"✅ Visualization chart saved: {save_path}")
 
+        # Show image (if in interactive environment)
         try:
             plt.show()
         except:
@@ -426,34 +377,28 @@ class QualityChecker:
         return str(save_path)
 
     def _plot_overall_distribution(self, ax, json_points: List[Dict], xodr_data: Dict):
-        """
-        绘制整体点分布
-        """
+        """Plot overall point distribution"""
 
-        # 绘制参考线
+        # ---------------- XODR参考线 ----------------
         if xodr_data["reference_lines"]:
             ref_x, ref_y = zip(*xodr_data["reference_lines"])
-            ax.plot(ref_x, ref_y, c='skyblue', linestyle='--', linewidth=2,
-                    label=f'XODR reference ({len(ref_x)})')
+            ax.scatter(ref_x, ref_y, c='skyblue', s=8, alpha=0.7,
+                       label=f'XODR reference ({len(ref_x)})')
 
-        # 绘制车道边界
-        lane_boundaries = xodr_data.get("lane_boundaries", {})
-        colors = cm.get_cmap('hsv', len(lane_boundaries) + 1)
+        # ---------------- XODR车道边界 ----------------
+        if xodr_data["lane_boundaries"]:
+            lane_x, lane_y = zip(*xodr_data["lane_boundaries"])
+            ax.scatter(lane_x, lane_y, c='lime', s=8, alpha=0.7,
+                       label=f'XODR lanes ({len(lane_x)})')
 
-        for i, (lane_id, lane_pts) in enumerate(lane_boundaries.items()):
-            if lane_pts:
-                lane_x, lane_y = zip(*lane_pts)
-                ax.plot(lane_x, lane_y, c=colors(i), linewidth=1.5,
-                        label=f'{lane_id} ({len(lane_x)})')
-
-        # 绘制 JSON 边界点
+        # ---------------- JSON边界点 ----------------
         bound_points = [p for p in json_points if p['source'] == 'bound']
         if bound_points:
             bx, by = [p['x'] for p in bound_points], [p['y'] for p in bound_points]
             ax.scatter(bx, by, c='red', s=30, alpha=0.8,
                        label=f'JSON bounds ({len(bound_points)})')
 
-        # 绘制 JSON 物体点
+        # ---------------- JSON物体点 ----------------
         obj_points = [p for p in json_points if p['source'] == 'object']
         if obj_points:
             ox, oy = [p['x'] for p in obj_points], [p['y'] for p in obj_points]
@@ -469,30 +414,36 @@ class QualityChecker:
 
     def _plot_deviation_analysis(self, ax, json_points: List[Dict], xodr_data: Dict):
         """Plot deviation analysis"""
+
+        # 合并参考线 + 车道边界，作为采样点全集
         xodr_points = []
         if xodr_data["reference_lines"]:
             xodr_points.extend(xodr_data["reference_lines"])
         if xodr_data["lane_boundaries"]:
-            for lane_id, lane_pts in xodr_data["lane_boundaries"].items():
-                xodr_points.extend(lane_pts)
+            xodr_points.extend(xodr_data["lane_boundaries"])
 
+        # 计算每个 JSON 点的偏移
         deviations = []
         for json_point in json_points:
             deviation = self._find_nearest_distance_to_xodr(json_point, xodr_points)
             deviations.append(deviation)
 
+        # JSON 点绘制，颜色表示偏移大小
         json_x = [p['x'] for p in json_points]
         json_y = [p['y'] for p in json_points]
         scatter = ax.scatter(json_x, json_y, c=deviations, s=50,
                              cmap='RdYlGn_r', alpha=0.8, edgecolors='black', linewidth=0.5)
 
+        # 背景画出 XODR 点
         if xodr_points:
             xp, yp = zip(*xodr_points)
             ax.scatter(xp, yp, c='lightgray', s=5, alpha=0.3, label='XODR samples')
 
+        # colorbar
         cbar = plt.colorbar(scatter, ax=ax)
         cbar.set_label('Deviation (m)')
 
+        # 文本统计
         stats_text = f"""Statistics:
     Total points: {len(json_points)}
     Avg deviation: {np.mean(deviations):.3f}m
@@ -513,11 +464,11 @@ class QualityChecker:
         print("\n🔍 Analyzing matching details...")
 
         all_json_points = self._get_all_json_points()
+        # 旧函数名 _sample_xodr_curves 已不存在，改用新函数并合并
         xodr_data = self._sample_xodr_curves_and_lanes()
         xodr_sample_points = []
         xodr_sample_points.extend(xodr_data.get("reference_lines", []))
-        for lane_id, lane_pts in xodr_data.get("lane_boundaries", {}).items():
-            xodr_sample_points.extend(lane_pts)
+        xodr_sample_points.extend(xodr_data.get("lane_boundaries", []))
 
         analysis_results = {
             'total_json_points': len(all_json_points),
@@ -565,7 +516,7 @@ class QualityChecker:
         count = 0
         for road in self.xodr_data.findall('.//road'):
             for lane in road.findall('.//lane'):
-                if lane.get('type') == 'driving':
+                if lane.get('type') == 'driving':  # 只统计行车道
                     count += 1
         return count
 
@@ -591,6 +542,8 @@ class QualityChecker:
                     'hdg': float(geometry.get('hdg', 0)),
                     'length': float(geometry.get('length', 0))
                 }
+
+                # 提取paramPoly3参数
                 param_poly3 = geometry.find('paramPoly3')
                 if param_poly3 is not None:
                     curve_data.update({
@@ -603,18 +556,29 @@ class QualityChecker:
                         'cV': float(param_poly3.get('cV', 0)),
                         'dV': float(param_poly3.get('dV', 0))
                     })
+
                 curves.append(curve_data)
         return curves
 
     def _evaluate_param_poly3(self, curve: Dict, t: float) -> Tuple[float, float]:
         """计算paramPoly3曲线在参数t处的坐标"""
-        aU, bU, cU, dU = [curve.get(k, 0) for k in ["aU", "bU", "cU", "dU"]]
-        aV, bV, cV, dV = [curve.get(k, 0) for k in ["aV", "bV", "cV", "dV"]]
+        # paramPoly3参数
+        aU = curve.get('aU', 0)
+        bU = curve.get('bU', 1)
+        cU = curve.get('cU', 0)
+        dU = curve.get('dU', 0)
+        aV = curve.get('aV', 0)
+        bV = curve.get('bV', 0)
+        cV = curve.get('cV', 0)
+        dV = curve.get('dV', 0)
 
+        # 计算局部坐标
         u = aU + bU * t + cU * t * t + dU * t * t * t
         v = aV + bV * t + cV * t * t + dV * t * t * t
 
-        x0, y0, hdg = curve['x'], curve['y'], curve['hdg']
+        # 转换到世界坐标系
+        x0, y0 = curve['x'], curve['y']
+        hdg = curve['hdg']
 
         cos_hdg = math.cos(hdg)
         sin_hdg = math.sin(hdg)
@@ -627,14 +591,21 @@ class QualityChecker:
     def generate_report(self) -> str:
         """生成质检报告"""
         print("\n📝 生成质检报告...")
+
+        # 执行所有检查
         if self.report.completeness_score == 0:
             self.check_completeness()
         if self.report.consistency_score == 0:
             self.check_curve_consistency()
+
+        # 生成HTML报告（下一步实现）
         html_report = self._generate_html_report()
+
+        # 保存报告
         report_file = self.json_file.parent / f"{self.json_file.stem}_quality_report.html"
         with open(report_file, 'w', encoding='utf-8') as f:
             f.write(html_report)
+
         print(f"✅ 质检报告已生成: {report_file}")
         return str(report_file)
 
@@ -643,17 +614,28 @@ class QualityChecker:
         return "<html><body><h1>质检报告生成中...</h1></body></html>"
 
 
+# 使用示例
 if __name__ == "__main__":
+    # 创建质检器实例
     checker = QualityChecker(
-        json_file="sample_objects.json",
-        xodr_file="sample_objects.xodr",
-        threshold=0.1
+        json_file="../src/sample_objects.json",
+        xodr_file="../src/sample_objects.xodr",
+        threshold=0.1  # 10cm阈值
     )
+
+    # 执行质检
     completeness = checker.check_completeness()
     consistency = checker.check_curve_consistency()
+
+    # 详细分析匹配情况
     analysis = checker.analyze_matching_details()
+
+    # 生成可视化图表
     viz_file = checker.visualize_point_matching()
+
+    # 生成报告
     report_file = checker.generate_report()
+
     print(f"\n📋 Quality check summary:")
     print(f"   Completeness score: {completeness:.1%}")
     print(f"   Consistency score: {consistency:.1%}")

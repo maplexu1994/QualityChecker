@@ -416,7 +416,7 @@ if __name__ == "__main__":
 #     with open("sample_data.xodr", "w") as f:
 #         f.write(sample_xodr_content)
 
-    checker = QualityChecker(json_file="sample_objects.json", xodr_file="sample_objects.xodr", threshold=0.2)
+    checker = QualityChecker(json_file="../src/sample_objects.json", xodr_file="../src/sample_objects.xodr", threshold=0.2)
     checker.check_completeness()
     checker.check_curve_consistency()
     checker.visualize_point_matching()

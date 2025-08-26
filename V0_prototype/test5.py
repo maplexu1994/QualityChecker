@@ -1073,8 +1073,8 @@ class QualityChecker:
 if __name__ == "__main__":
     # 创建质检器实例
     checker = QualityChecker(
-        json_file="label3_2.json",
-        xodr_file="label3_2.xodr",
+        json_file="../src/label3_2.json",
+        xodr_file="../src/label3_2.xodr",
         threshold=0.1  # 10cm阈值
     )
 
