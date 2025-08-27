@@ -1,0 +1,26 @@
+
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8" /><title>JSON↔XODR 质检完整性报告 v1.1</title></head>
+<body>
+  <h1>JSON↔XODR 完整性概览 v1.1</h1>
+  <div>综合完整性评分：0.92</div>
+  <table border="1" cellspacing="0" cellpadding="4">
+    <tr><th>要素</th><th>JSON 数量</th><th>XODR 数量</th><th>子分数</th><th>备注 / 细分</th></tr>
+    <tr><td>车道（driving）</td><td style='text-align:right'>6</td><td style='text-align:right'>6</td><td style='text-align:right'>1.00</td><td></td></tr>
+<tr><td>边界 / 标线（JSON唯一计数 vs XODR实体）</td><td style='text-align:right'>9</td><td style='text-align:right'>6</td><td style='text-align:right'>0.67</td><td>唯一边界ID数：9；共有边界：3 个（ID: [2, 5, 8]）</td></tr>
+<tr><td>物体（objects）</td><td style='text-align:right'>1</td><td style='text-align:right'>1</td><td style='text-align:right'>1.00</td><td></td></tr>
+<tr><td>标识（sign → signal）</td><td style='text-align:right'>1</td><td style='text-align:right'>1</td><td style='text-align:right'>1.00</td><td>JSON sign 数量与 XODR signal 数量的匹配度</td></tr>
+  </table>
+  <h2>细节</h2>
+  <div>JSON 驾驶车道ID: [1, 2, 3, 4, 5, 6]</div>
+  <div>唯一边界ID: [1, 2, 3, 4, 5, 6, 7, 8, 9]</div>
+  <div>共有边界ID: [2, 5, 8]</div>
+  <h3>Debug: XODR roadMark 属性</h3><pre style='font-size:12px;background:#f9fafb;padding:10px;border:1px solid #eee;border-radius:6px;overflow:auto;'>{'road_id': '1', 'laneSection_index': 0, 'lane_side': 'left', 'lane_id': '1', 'tag': 'roadMark', 'attrib': {'sOffset': '0.0000000000000000e+00', 'type': 'solid', 'width': '1.5e-01', 'material': 'standard', 'weight': 'standard', 'color': 'white', 'laneChange': 'none'}}
+{'road_id': '1', 'laneSection_index': 0, 'lane_side': 'right', 'lane_id': '-1', 'tag': 'roadMark', 'attrib': {'sOffset': '0.0000000000000000e+00', 'type': 'broken', 'width': '1.5e-01', 'material': 'standard', 'weight': 'standard', 'color': 'white', 'laneChange': 'both'}}
+{'road_id': '2', 'laneSection_index': 0, 'lane_side': 'left', 'lane_id': '1', 'tag': 'roadMark', 'attrib': {'sOffset': '0.0000000000000000e+00', 'type': 'solid', 'width': '1.5e-01', 'material': 'standard', 'weight': 'standard', 'color': 'white', 'laneChange': 'none'}}
+{'road_id': '2', 'laneSection_index': 0, 'lane_side': 'right', 'lane_id': '-1', 'tag': 'roadMark', 'attrib': {'sOffset': '0.0000000000000000e+00', 'type': 'broken', 'width': '1.5e-01', 'material': 'standard', 'weight': 'standard', 'color': 'white', 'laneChange': 'both'}}
+{'road_id': '3', 'laneSection_index': 0, 'lane_side': 'left', 'lane_id': '1', 'tag': 'roadMark', 'attrib': {'sOffset': '0.0000000000000000e+00', 'type': 'solid', 'width': '1.5e-01', 'material': 'standard', 'weight': 'standard', 'color': 'white', 'laneChange': 'none'}}
+{'road_id': '3', 'laneSection_index': 0, 'lane_side': 'right', 'lane_id': '-1', 'tag': 'roadMark', 'attrib': {'sOffset': '0.0000000000000000e+00', 'type': 'broken', 'width': '1.5e-01', 'material': 'standard', 'weight': 'standard', 'color': 'white', 'laneChange': 'both'}}</pre>
+</body>
+</html>
