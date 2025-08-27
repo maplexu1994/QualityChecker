@@ -1,0 +1,382 @@
+{
+
+  "bounds": [
+    {
+      "id": 1,
+      "pts": [
+        { "x": 0.0, "y": 10.5, "z": 0.5 },
+        { "x": -10.0, "y": 10.5, "z": 0.5 },
+        { "x": -50.0, "y": 10.5, "z": 0.5 }
+      ],
+      "lane_mark": [
+        {
+          "x_start": -50.0,
+          "y_start": 10.5,
+          "z_start": 0.5,
+          "type": "solid",
+          "color": "yellow",
+          "deceleration": false
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "pts": [
+        { "x": -50.0, "y": 7.0, "z": 0.5 },
+        { "x": -10.0, "y": 7.0, "z": 0.5 },
+        { "x": 0.0, "y": 7.0, "z": 0.5 }
+      ],
+      "lane_mark": [
+        {
+          "x_start": -50.0,
+          "y_start": 7.0,
+          "z_start": 0.5,
+          "type": "broken",
+          "color": "white",
+          "deceleration": false
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "pts": [
+        { "x": -50.0, "y": 3.5, "z": 0.5 },
+        { "x": -10.0, "y": 3.5, "z": 0.5 },
+        { "x": 0.0, "y": 3.5, "z": 0.5 }
+      ],
+      "lane_mark": [
+        {
+          "x_start": -50.0,
+          "y_start": 3.5,
+          "z_start": 0.5,
+          "type": "broken",
+          "color": "white",
+          "deceleration": false
+        },
+        {
+          "x_start": -10.0,
+          "y_start": 3.5,
+          "z_start": 0.5,
+          "type": "solid",
+          "color": "white",
+          "deceleration": false
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "pts": [
+        { "x": -50.0, "y": 0.0, "z": 0.5 },
+        { "x": -10.0, "y": 0.0, "z": 0.5 },
+        { "x": 0.0, "y": 0.0, "z": 0.5 }
+      ],
+      "lane_mark": [
+        {
+          "x_start": -50.0,
+          "y_start": 0.0,
+          "z_start": 0.5,
+          "type": "solid",
+          "color": "white",
+          "deceleration": false
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "pts": [
+        { "x": 0.0, "y": 10.5, "z": 0.5 },
+        { "x": 20.0, "y": 10.5, "z": 0.5 },
+        { "x": 40.0, "y": 10.5, "z": 0.5 }
+      ],
+      "lane_mark": [
+        {
+          "x_start": 0.0,
+          "y_start": 10.5,
+          "z_start": 0.5,
+          "type": "solid",
+          "color": "yellow",
+          "deceleration": false
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "pts": [
+        { "x": 0.0, "y": 7.0, "z": 0.5 },
+        { "x": 20.0, "y": 7.0, "z": 0.5 },
+        { "x": 40.0, "y": 7.0, "z": 0.5 }
+      ],
+      "lane_mark": [
+        {
+          "x_start": 0.0,
+          "y_start": 7.0,
+          "z_start": 0.5,
+          "type": "solid",
+          "color": "white",
+          "deceleration": false
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "pts": [
+        { "x": 0.0, "y": 3.5, "z": 0.5 },
+        { "x": 20.0, "y": 3.5, "z": 0.5 },
+        { "x": 40.0, "y": 3.5, "z": 0.5 }
+      ],
+      "lane_mark": [
+        {
+          "x_start": 0.0,
+          "y_start": 3.5,
+          "z_start": 0.5,
+          "type": "none",
+          "color": "other",
+          "deceleration": false
+        },
+        {
+          "x_start": 15.8,
+          "y_start": 3.5,
+          "z_start": 0.5,
+          "type": "solid",
+          "color": "white",
+          "deceleration": false
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "pts": [
+        { "x": 0.0, "y": 0.0, "z": 0.5 },
+        { "x": 20.0, "y": 0.0, "z": 0.5 },
+        { "x": 40.0, "y": 0.0, "z": 0.5 }
+      ],
+      "lane_mark": [
+        {
+          "x_start": 0.0,
+          "y_start": 0.0,
+          "z_start": 0.5,
+          "type": "none",
+          "color": "other",
+          "deceleration": false
+        },
+        {
+          "x_start": 22.2,
+          "y_start": 0.0,
+          "z_start": 0.5,
+          "type": "solid",
+          "color": "white",
+          "deceleration": false
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "pts": [
+        { "x": 0.0, "y": 7.0, "z": 0.5 },
+        { "x": 11.5, "y": 5.2, "z": 0.5 },
+        { "x": 31.8, "y": -6.0, "z": 0.5 }
+      ],
+      "lane_mark": [
+        {
+          "x_start": 0.0,
+          "y_start": 3.5,
+          "z_start": 0.5,
+          "type": "broken",
+          "color": "white",
+          "deceleration": false
+        },
+        {
+          "x_start": 22.2,
+          "y_start": 0.0,
+          "z_start": 0.5,
+          "type": "solid",
+          "color": "white",
+          "deceleration": false
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "pts": [
+        { "x": 0.0, "y": 3.5, "z": 0.5 },
+        { "x": 10.0, "y": 2, "z": 0.5 },
+        { "x": 30.0, "y": -9.0, "z": 0.5 }
+      ],
+      "lane_mark": [
+        {
+          "x_start": 0.0,
+          "y_start": 3.5,
+          "z_start": 0.5,
+          "type": "broken",
+          "color": "white",
+          "deceleration": false
+        },
+        {
+          "x_start": 15.0,
+          "y_start": 0.0,
+          "z_start": 0.5,
+          "type": "solid",
+          "color": "white",
+          "deceleration": false
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "pts": [
+        { "x": 0.0, "y": 0.0, "z": 0.5 },
+        { "x": 9.0, "y": -1.2, "z": 0.5 },
+        { "x": 28.2, "y": -12.0, "z": 0.5 }
+      ],
+      "lane_mark": [
+        {
+          "x_start": 0.0,
+          "y_start": 0.0,
+          "z_start": 0.5,
+          "type": "solid",
+          "color": "white",
+          "deceleration": false
+        }
+      ]
+    }
+  ],
+  "lanes": [
+    {
+      "id": 0,
+      "type": "driving",
+      "left_bound_id": 1,
+      "right_bound_id": 2,
+      "left_lane_id": null,
+      "right_lane_id": 1,
+      "front_lane_ids": [3],
+      "back_lane_ids": []
+    },
+    {
+      "id": 1,
+      "type": "driving",
+      "left_bound_id": 2,
+      "right_bound_id": 3,
+      "left_lane_id": 0,
+      "right_lane_id": 2,
+      "front_lane_ids": [4, 6],
+      "back_lane_ids": []
+    },
+    {
+      "id": 2,
+      "type": "driving",
+      "left_bound_id": 3,
+      "right_bound_id": 4,
+      "left_lane_id": 1,
+      "right_lane_id": null,
+      "front_lane_ids": [5, 7],
+      "back_lane_ids": []
+    },
+    {
+      "id": 3,
+      "type": "driving",
+      "left_bound_id": 5,
+      "right_bound_id": 6,
+      "left_lane_id": null,
+      "right_lane_id": 4,
+      "front_lane_ids": [],
+      "back_lane_ids": [0]
+    },
+    {
+      "id": 4,
+      "type": "driving",
+      "left_bound_id": 6,
+      "right_bound_id": 7,
+      "left_lane_id": 3,
+      "right_lane_id": 5,
+      "front_lane_ids": [],
+      "back_lane_ids": [1]
+    },
+    {
+      "id": 5,
+      "type": "driving",
+      "left_bound_id": 7,
+      "right_bound_id": 8,
+      "left_lane_id": 4,
+      "right_lane_id": null,
+      "front_lane_ids": [],
+      "back_lane_ids": [2]
+    },
+    {
+      "id": 6,
+      "type": "driving",
+      "left_bound_id": 9,
+      "right_bound_id": 10,
+      "left_lane_id": null,
+      "right_lane_id": 7,
+      "front_lane_ids": [],
+      "back_lane_ids": [1]
+    },
+    {
+      "id": 7,
+      "type": "driving",
+      "left_bound_id": 10,
+      "right_bound_id": 11,
+      "left_lane_id": 6,
+      "right_lane_id": null,
+      "front_lane_ids": [],
+      "back_lane_ids": [2]
+    }
+  ],
+  "objects": [
+    {
+      "id": 1,
+      "type": "barrier",
+      "sub_type": "jersey barrier",
+      "outline": [
+        { "x": -50.0, "y": 10.6, "z": 0.5, "height": 0.2 },
+        { "x": 0.0, "y": 10.6, "z": 0.5, "height": 0.2 },
+        { "x": 0.0, "y": 10.4, "z": 0.5, "height": 0.2 },
+        { "x": -50.0, "y": 10.4, "z": 0.5, "height": 0.2 }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "obstacle",
+      "sub_type": "water barrier",
+      "outline": [
+        { "x": 0.0, "y": 0.5, "z": 0.5, "height": 1.1 },
+        { "x": -0.3535533906, "y": 0.3535533906, "z": 0.5, "height": 1.1 },
+        { "x": -0.5, "y": 0.0, "z": 0.5, "height": 1.1 },
+        { "x": -0.3535533906, "y": -0.3535533906, "z": 0.5, "height": 1.1 },
+        { "x": 0.0, "y": -0.5, "z": 0.5, "height": 1.1 },
+        { "x": 0.3535533906, "y": -0.3535533906, "z": 0.5, "height": 1.1 },
+        { "x": 0.5, "y": 0.0, "z": 0.5, "height": 1.1 },
+        { "x": 0.3535533906, "y": 0.3535533906, "z": 0.5, "height": 1.1 },
+        { "x": 0.0, "y": 0.5, "z": 0.5, "height": 1.1 }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "obstacle",
+      "sub_type": "water barrier",
+      "outline": [
+        { "x": -2.0, "y": 0.5, "z": 0.5, "height": 1.1 },
+        { "x": -2.3535533906, "y": 0.3535533906, "z": 0.5, "height": 1.1 },
+        { "x": -2.5, "y": 0.0, "z": 0.5, "height": 1.1 },
+        { "x": -2.3535533906, "y": -0.3535533906, "z": 0.5, "height": 1.1 },
+        { "x": -2.0, "y": -0.5, "z": 0.5, "height": 1.1 },
+        { "x": -1.6464466094, "y": -0.3535533906, "z": 0.5, "height": 1.1 },
+        { "x": -1.5, "y": 0.0, "z": 0.5, "height": 1.1 },
+        { "x": -1.6464466094, "y": 0.3535533906, "z": 0.5, "height": 1.1 },
+        { "x": -2.0, "y": 0.5, "z": 0.5, "height": 1.1 }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "barrier",
+      "sub_type": "jersey barrier",
+      "outline": [
+        { "x": 0.0, "y": 10.6, "z": 0.5, "height": 0.2 },
+        { "x": 40.0, "y": 10.6, "z": 0.5, "height": 0.2 },
+        { "x": 40.0, "y": 10.4, "z": 0.5, "height": 0.2 },
+        { "x": 0.0, "y": 10.4, "z": 0.5, "height": 0.2 }
+      ]
+    }
+  ],
+  "sign": []
+}

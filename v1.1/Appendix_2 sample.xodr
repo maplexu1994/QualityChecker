@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenDRIVE>
+  <header revMajor="1" revMinor="4" name="Highway Merge with Objects (Curved Reference Lines)" version="1" date="2025-03-26" vendor="YourCompany"/>
+
+  <!-- Road A: 高速公路 -->
+  <road id="1" name="Highway_A" length="300.0" junction="-1">
+    <link>
+      <successor elementType="junction" elementId="4" />
+    </link>
+    <planView>
+      <!-- 使用 paramPoly3 表示曲线参考线 -->
+      <geometry s="0.0" x="0.0" y="0.0" hdg="0.0" length="300.0">
+        <paramPoly3 
+            aU="0.0" bU="1.0" cU="0.00" dU="0.0"
+            aV="0.0" bV="0.0" cV="0.000" dV="0.0" 
+            pRange="arcLength"/>
+      </geometry>
+    </planView>
+    <elevationProfile>
+      <elevation s="0" a="0.0" b="0.0" c="0.0" d="0.0"/>
+    </elevationProfile>
+    <lateralProfile>
+      <superelevation s="0" a="0.0" b="0.0" c="0.0" d="0.0"/>
+    </lateralProfile>
+    <objects>
+      <object id="1" name="jersyBarrier01" type="barrier" subtype="jersyBarrier" s="150.0" t="-3.0" zOffest="0.0" hdg="0." height="2.0" length="3.0" width="0.5">
+        <outlines>
+          <outline id="1" outer="true" closed="false">
+            <cornerLocal id="1" u="0.0" v="0.25" z="0.0" height="2.0"/>
+            <cornerLocal id="2" u="0.0" v="-0.25" z="0.0" height="2.0"/>
+            <cornerLocal id="3" u="3.0" v="-0.25" z="0.0" height="2.0"/>
+            <cornerLocal id="4" u="3.0" v="0.25" z="0.0" height="2.0"/>
+          </outline>
+        </outlines>
+      </object>
+    </objects>
+    <lanes>
+      <laneOffset s="0.0000000000000000e+00" a="0.0000000000000000e+00" b="0.0000000000000000e+00" c="0.0000000000000000e+00" d="0.0000000000000000e+00"/>
+      <laneSection s="0">
+        <left>
+          <lane id="1" type="driving" level="false">
+            <width sOffset="0" a="3.5" b="0" c="0" d="0"/>
+            <roadMark sOffset="0.0000000000000000e+00" type="solid" width="1.5e-01" material="standard" weight="standard" color="white" laneChange="none"/>
+            <link>
+              <successor id="1"/>
+            </link>
+          </lane>
+        </left>
+        <center>
+          <lane id="0" type="none" level="false"/>
+        </center>
+        <right>
+          <lane id="-1" type="driving" level="false">
+            <width sOffset="0" a="3.5" b="0" c="0" d="0"/>
+            <roadMark sOffset="0.0000000000000000e+00" type="broken" width="1.5e-01" material="standard" weight="standard" color="white" laneChange="both"/>
+            <link>
+              <successor id="-1"/>
+            </link>
+          </lane>
+        </right>
+      </laneSection>
+    </lanes>
+  </road>
+
+  <!-- Road B: 入口匝道 -->
+  <road id="2" name="OnRamp" length="80.0" junction="-1">
+    <link>
+      <successor elementType="junction" elementId="4" />
+    </link>
+    <planView>
+      <!-- 起点为 (243.43, -56.57)，hdg=0.7854，采用 paramPoly3 表示曲线 -->
+      <geometry s="0.0" x="233.43" y="-44.57" hdg="0.7854" length="80.0">
+        <paramPoly3 
+            aU="0.0" bU="1.0" cU="0.0" dU="0.0"
+            aV="0.0" bV="0.0" cV="-0.0025" dV="0.0" 
+            pRange="arcLength"/>
+      </geometry>
+    </planView>
+    <elevationProfile>
+      <elevation s="0" a="-1.0" b="0.02" c="0.0" d="0.0"/>
+    </elevationProfile>
+    <lateralProfile>
+      <superelevation s="0" a="0.0" b="0.00" c="0.0" d="0.0"/>
+    </lateralProfile>
+
+    <signals>
+      <signal id="1" name="SpeedLimit" text="40" s="30.0" t="3.5" zOffset="2.0" hdg="0.0" roll="0.0" width="0.77" height="0.77" oritentation="+" dynamic="no">
+        <validity fromLane="1" toLane="1" />
+      </signal>
+    </signals>
+
+    <lanes>
+      <laneOffset s="0.0000000000000000e+00" a="0.0000000000000000e+00" b="0.0000000000000000e+00" c="0.0000000000000000e+00" d="0.0000000000000000e+00"/>
+      <laneSection s="0">
+        <left>
+          <lane id="1" type="driving" level="false">
+            <width sOffset="0" a="3.0" b="0" c="0" d="0"/>
+            <roadMark sOffset="0.0000000000000000e+00" type="solid" width="1.5e-01" material="standard" weight="standard" color="white" laneChange="none"/>
+            <link>
+              <successor id="1"/>
+            </link>
+          </lane>
+        </left>
+        <center>
+          <lane id="0" type="none" level="false"/>
+        </center>
+        <right>
+          <lane id="-1" type="driving" level="false">
+            <width sOffset="0" a="3.0" b="0" c="0" d="0"/>
+            <roadMark sOffset="0.0000000000000000e+00" type="broken" width="1.5e-01" material="standard" weight="standard" color="white" laneChange="both"/>
+            <link>
+              <successor id="-1"/>
+            </link>
+          </lane>
+        </right>
+      </laneSection>
+    </lanes>
+  </road>
+
+  <!-- Road C: 主干高速 -->
+  <road id="3" name="Highway_C" length="500.0" junction="-1">
+    <link>
+      <predecessor elementType="junction" elementId="4"/>
+    </link>
+    <planView>
+      <!-- 起点为 (300,0)，hdg=0，采用 paramPoly3 表示曲线参考线 -->
+      <geometry s="0.0" x="300.0" y="0.0" hdg="0.0" length="500.0">
+        <paramPoly3 
+            aU="0.0" bU="1.0" cU="0.0005" dU="5.0e-06"
+            aV="0.0" bV="0.0" cV="0.0001" dV="0.0" 
+            pRange="arcLength"/>
+      </geometry>
+    </planView>
+    <elevationProfile>
+      <elevation s="0" a="0.0" b="0.0" c="0.0" d="0.0"/>
+    </elevationProfile>
+    <lateralProfile>
+      <superelevation s="0" a="0.0005" b="0.0" c="0.0" d="0.0"/>
+    </lateralProfile>
+    <lanes>
+      <laneOffset s="0.0000000000000000e+00" a="0.0000000000000000e+00" b="0.0000000000000000e+00" c="0.0000000000000000e+00" d="0.0000000000000000e+00"/>
+      <laneSection s="0">
+        <left>
+          <lane id="1" type="driving" level="false">
+            <width sOffset="0" a="3.5" b="0" c="0" d="0"/>
+            <roadMark sOffset="0.0000000000000000e+00" type="solid" width="1.5e-01" material="standard" weight="standard" color="white" laneChange="none"/>
+          </lane>
+        </left>
+        <center>
+          <lane id="0" type="none" level="false"/>
+        </center>
+        <right>
+          <lane id="-1" type="driving" level="false">
+            <width sOffset="0" a="3.5" b="0" c="0" d="0"/>
+            <roadMark sOffset="0.0000000000000000e+00" type="broken" width="1.5e-01" material="standard" weight="standard" color="white" laneChange="both"/>
+          </lane>
+        </right>
+      </laneSection>
+    </lanes>
+  </road>
+  <!-- Junction 4: 合流交叉口 -->
+  <junction id="4" name="MergeJunction">
+    <connection id="5" incomingRoad="1" connectingRoad="3" contactPoint="start">
+      <laneLink from="1" to="1"/>
+      <laneLink from="0" to="0"/>
+      <laneLink from="-1" to="-1"/>
+    </connection>
+    <connection id="6" incomingRoad="2" connectingRoad="3" contactPoint="start">
+      <laneLink from="1" to="1"/>
+      <laneLink from="0" to="0"/>
+      <laneLink from="-1" to="-1"/>
+    </connection>
+  </junction>
+</OpenDRIVE>
+
