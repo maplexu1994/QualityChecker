@@ -1,0 +1,28 @@
+<type>(<scope>): <subject>
+
+# 采用 Conventional Commits。常用 type：feat | fix | refactor | perf | docs | test | chore | ci | build | style | revert
+# 示例：feat(v1.2/html): 采用 v1.0 风格重写质检报告生成
+#
+# 提示：第一行（subject）≤ 50 字符；正文换行 ≤ 72 字符。
+
+# 背景/动机：
+# - 为什么要做这个改动？遇到了什么问题？
+
+# 主要变更：
+# - 列出关键点（接口/行为/目录/脚本等）
+
+# 影响/风险：
+# - [ ] 影响 v1.2 默认行为
+# - [ ] 需要更新配置（configs/*）
+# - [ ] 需要重新生成示例（data/samples/*）
+
+# 验证方式：
+# - [ ] 使用 data/samples/sample_objects.json / sample_objects.xodr 跑通主流程
+# - [ ] 关键可视化通过（figures 示例）
+# - [ ] 报告 HTML 正常渲染（v1.0 风格）
+
+# 关联：
+# Closes #
+
+# BREAKING CHANGE（如有）：
+# - 描述不兼容变化与迁移指南
