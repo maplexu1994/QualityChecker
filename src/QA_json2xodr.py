@@ -239,7 +239,7 @@ class QualityChecker:
 
         return all_points
 
-    def _sample_xodr_curves_and_lanes(self, step: float = 0.5):
+    def _sample_xodr_curves_and_lanes(self, step: float = 0.05):
         """
         采样参考线 + 车道(中心线/边界线)，并返回：
           - reference_lines: 扁平点集（兼容旧逻辑）
