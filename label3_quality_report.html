@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>JSON→XODR 质检报告</title>
+<style>
+  html,body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans CJK SC","Microsoft YaHei","PingFang SC",sans-serif;color:#222; }
+  .container { max-width: 1100px; margin: 32px auto; padding: 0 16px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  h2 { font-size: 20px; margin: 28px 0 12px; border-left:4px solid #555; padding-left:8px; }
+  h3 { font-size: 16px; margin: 18px 0 10px; }
+  .meta,.muted { color:#666; font-size: 13px; }
+  .grid { display:grid; grid-template-columns: repeat(3,1fr); gap:12px; }
+  .grid2 { display:grid; grid-template-columns: repeat(2,1fr); gap:12px; }
+  .card { border:1px solid #e6e6e6; border-radius:10px; padding:12px 14px; background:#fff; }
+  .kpi { font-size: 22px; font-weight:600; }
+  .ok { color:#138000; } .warn { color:#d97706; } .bad { color:#b91c1c; }
+  table { width:100%; border-collapse: collapse; font-size: 13px; }
+  th,td { border-bottom:1px solid #eee; padding:6px 8px; text-align:left; }
+  th { background:#fafafa; }
+  td.num,th.num { text-align:right; font-variant-numeric: tabular-nums; }
+  .imgwrap { text-align:center; margin: 14px 0 6px; }
+  .warning-list { margin:6px 0 0 16px; }
+  .legend { color:#555; font-size: 13px; }
+  .footer { color:#777; font-size: 12px; margin-top: 28px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid transparent; }
+  .badge.pass { background:#E6F4EA; color:#137333; border-color:#CFE9D6; }
+  .badge.warn { background:#FEF7E0; color:#B06000; border-color:#F3D89C; }
+  .badge.fail { background:#FDE7E9; color:#B3261E; border-color:#F4C7C9; }
+  .badge.miss { background:#E7F3FF; color:#01579B; border-color:#CDE7FF; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>JSON → XODR 质检报告</h1>
+  <div class="meta">生成时间：2025-08-28 11:37:05</div>
+  <div class="meta">JSON 文件：label3.json</div>
+  <div class="meta">XODR 文件：label3.xodr</div>
+
+  <h2>摘要</h2>
+  <div class="grid">
+    <div class="card">
+      <div class="muted">完整性得分</div>
+      <div class="kpi">92.6%</div>
+      <div class="legend">依据：车道/边界/物体/标识数量对比</div>
+    </div>
+    <div class="card">
+      <div class="muted">一致性得分（曲线）</div>
+      <div class="kpi">82.1%</div>
+      <div class="legend">依据：JSON 边界点 ↔ XODR（参考线+车道边界）最近距离均值 vs 阈值（0.100 m）</div>
+    </div>
+    <div class="card">
+      <div class="muted">对象/标识位置（两口径）</div>
+      <div class="legend"><b>Objects</b> — 锚点：均值 1.543 / 最大 28.695；质心：均值 1.263 / 最大 23.348 m</div>
+      <div class="legend"><b>Signals</b> — 锚点：均值 — / 最大 —；质心：均值 — / 最大 — m</div>
+    </div>
+  </div>
+
+  <h2>完整性检查</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>要素</th><th class="num">JSON 数量</th><th class="num">XODR 数量</th><th class="num">子分数</th></tr></thead>
+      <tbody>
+        <tr><td>车道（driving）</td><td class="num">15</td><td class="num">15</td><td class="num">1.00</td></tr>
+        <tr><td>边界（唯一ID vs 拓扑边界）</td><td class="num">27</td><td class="num">19</td><td class="num">0.70</td></tr>
+        <tr><td>标识（sign → signal）</td><td class="num">0</td><td class="num">0</td><td class="num">1.00</td></tr>
+        <tr><td>物体（objects）</td><td class="num">37</td><td class="num">37</td><td class="num">1.00</td></tr>
+      </tbody>
+    </table>
+    <div class="legend" style="margin-top:8px;">边界备注：唯一边界ID 27；共有边界 11（ID: [15, 16, 17, 18, 25, 27, 31, 32, 33, 34, 35]）</div>
+  </div>
+
+  <h2>一致性检查（曲线）</h2>
+  <div class="grid">
+    <div class="card"><div class="muted">平均偏移</div><div class="kpi">0.018 m</div></div>
+    <div class="card"><div class="muted">最大 / 最小偏移</div><div class="kpi">0.071 / 0.000 m</div></div>
+    <div class="card"><div class="muted">参与点数</div><div class="kpi">182</div><div class="legend">仅包含 JSON 边界点</div></div>
+  </div>
+  <div class="card"><div class="muted">分布 & 偏移热力</div><div class="imgwrap"><img src="label3_visualization.png" style="max-width:100%;border:1px solid #eee;border-radius:8px;"></div></div>
+
+  <h2>对象/标识一致性（v1.3.4）</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>Objects</h3>
+      <div class="legend">匹配：37/37（XODR 37）</div>
+      <div class="legend">位置（锚点）：均值 1.543；最大 28.695 m</div>
+      <div class="legend">位置（质心）：均值 1.263；最大 23.348 m</div>
+      <div class="legend">轮廓 Chamfer（均值）：1.258 m；最大：60.580 m</div>
+      <div class="legend">轮廓判定统计：<span class='badge pass'>通过</span> 35；<span class='badge warn'>警告</span> 0；<span class='badge fail'>失败</span> 2；<span class='badge miss'>缺失</span> 0</div>
+    </div>
+    <div class="card">
+      <h3>Signals</h3>
+      <div class="legend">匹配：0/0（XODR 0）</div>
+      <div class="legend">位置（锚点）：均值 —；最大 — m</div>
+      <div class="legend">位置（质心）：均值 —；最大 — m</div>
+      <div class="legend">轮廓 Chamfer（均值）：— m；最大：— m</div>
+      <div class="legend">轮廓判定统计：<span class='badge pass'>通过</span> 0；<span class='badge warn'>警告</span> 0；<span class='badge fail'>失败</span> 0；<span class='badge miss'>缺失</span> 0</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="muted">对象/标识轮廓叠加</div>
+    <div class="imgwrap"><img src="label3_outline_overlay.png" style="max-width:100%;border:1px solid #eee;border-radius:8px;"></div>
+    <div class="legend">实线：JSON；虚线：XODR。重合度越高越好。</div>
+    <div class="legend">轮廓阈值 outline_tol = 0.200 m；判定：均值 ≤ tol → 通过；≤ 2·tol → 警告；其余 → 失败；任一侧缺失 → 缺失。</div>
+  </div>
+
+  <h2>Objects — 中心偏移明细（前 200 条）</h2>
+  <div class="card">
+    <table>
+      <thead><tr>
+        <th>JSON ID</th><th>XODR ID</th>
+        <th class="num">JSON中心 (x, y)</th>
+        <th class="num">XODR中心-锚点 (x, y)</th>
+        <th class="num">XODR中心-质心 (x, y)</th>
+        <th class="num">Δ锚点(m)</th>
+        <th class="num">Δ质心(m)</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>polyline_1</td><td>1</td><td class='num'>28.640, -7.542</td><td class='num'>25.477, -7.308</td><td class='num'>28.641, -7.542</td><td class='num'>3.171</td><td class='num'>0.001</td></tr><tr><td>polyline_6</td><td>2</td><td class='num'>73.113, -11.744</td><td class='num'>73.880, -11.403</td><td class='num'>73.114, -11.744</td><td class='num'>0.839</td><td class='num'>0.001</td></tr><tr><td>polyline_21</td><td>5</td><td class='num'>187.273, -35.551</td><td class='num'>183.789, -43.994</td><td class='num'>198.683, -55.919</td><td class='num'>9.133</td><td class='num'>23.346</td></tr><tr><td>polyline_38</td><td>4</td><td class='num'>325.461, -104.775</td><td class='num'>335.641, -111.023</td><td class='num'>325.462, -104.776</td><td class='num'>11.944</td><td class='num'>0.001</td></tr><tr><td>polyline_39</td><td>3</td><td class='num'>198.684, -55.919</td><td class='num'>197.033, -27.272</td><td class='num'>187.272, -35.551</td><td class='num'>28.695</td><td class='num'>23.348</td></tr><tr><td>1</td><td>6</td><td class='num'>109.999, -17.495</td><td class='num'>109.970, -17.591</td><td class='num'>109.998, -17.495</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>2</td><td>7</td><td class='num'>111.995, -17.904</td><td class='num'>111.967, -18.000</td><td class='num'>111.994, -17.903</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>3</td><td>8</td><td class='num'>113.958, -18.285</td><td class='num'>113.930, -18.382</td><td class='num'>113.957, -18.285</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>4</td><td>9</td><td class='num'>116.008, -18.722</td><td class='num'>116.034, -18.625</td><td class='num'>116.006, -18.722</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>5</td><td>10</td><td class='num'>118.068, -19.122</td><td class='num'>118.039, -19.218</td><td class='num'>118.066, -19.122</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>6</td><td>11</td><td class='num'>120.026, -19.540</td><td class='num'>120.000, -19.637</td><td class='num'>120.025, -19.540</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>7</td><td>12</td><td class='num'>122.091, -19.940</td><td class='num'>122.063, -20.036</td><td class='num'>122.090, -19.939</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>8</td><td>13</td><td class='num'>124.135, -20.377</td><td class='num'>124.107, -20.473</td><td class='num'>124.134, -20.376</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>9</td><td>14</td><td class='num'>126.142, -20.774</td><td class='num'>126.114, -20.870</td><td class='num'>126.141, -20.774</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>10</td><td>15</td><td class='num'>128.104, -21.194</td><td class='num'>128.130, -21.098</td><td class='num'>128.103, -21.194</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>11</td><td>16</td><td class='num'>130.104, -21.576</td><td class='num'>130.076, -21.672</td><td class='num'>130.103, -21.576</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>12</td><td>17</td><td class='num'>132.088, -22.004</td><td class='num'>132.113, -21.906</td><td class='num'>132.087, -22.003</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>13</td><td>18</td><td class='num'>134.044, -22.375</td><td class='num'>134.016, -22.472</td><td class='num'>134.043, -22.375</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>14</td><td>19</td><td class='num'>136.058, -22.772</td><td class='num'>136.030, -22.868</td><td class='num'>136.057, -22.771</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>15</td><td>20</td><td class='num'>137.991, -23.176</td><td class='num'>137.963, -23.273</td><td class='num'>137.990, -23.176</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>16</td><td>21</td><td class='num'>140.001, -23.586</td><td class='num'>139.972, -23.682</td><td class='num'>140.000, -23.586</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>17</td><td>22</td><td class='num'>141.932, -23.957</td><td class='num'>141.959, -23.860</td><td class='num'>141.932, -23.957</td><td class='num'>0.100</td><td class='num'>0.000</td></tr><tr><td>18</td><td>23</td><td class='num'>143.903, -24.366</td><td class='num'>143.875, -24.463</td><td class='num'>143.902, -24.366</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>19</td><td>24</td><td class='num'>145.844, -24.774</td><td class='num'>145.871, -24.678</td><td class='num'>145.844, -24.774</td><td class='num'>0.100</td><td class='num'>0.000</td></tr><tr><td>20</td><td>25</td><td class='num'>147.757, -25.139</td><td class='num'>147.729, -25.235</td><td class='num'>147.756, -25.138</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>21</td><td>26</td><td class='num'>292.194, -83.239</td><td class='num'>292.250, -83.156</td><td class='num'>292.194, -83.240</td><td class='num'>0.100</td><td class='num'>0.000</td></tr><tr><td>22</td><td>27</td><td class='num'>293.911, -84.375</td><td class='num'>293.849, -84.454</td><td class='num'>293.911, -84.375</td><td class='num'>0.100</td><td class='num'>0.000</td></tr><tr><td>23</td><td>28</td><td class='num'>295.694, -85.596</td><td class='num'>295.631, -85.674</td><td class='num'>295.693, -85.596</td><td class='num'>0.100</td><td class='num'>0.000</td></tr><tr><td>24</td><td>29</td><td class='num'>297.444, -86.758</td><td class='num'>297.505, -86.679</td><td class='num'>297.443, -86.758</td><td class='num'>0.100</td><td class='num'>0.000</td></tr><tr><td>25</td><td>30</td><td class='num'>299.166, -87.908</td><td class='num'>299.230, -87.829</td><td class='num'>299.168, -87.908</td><td class='num'>0.101</td><td class='num'>0.001</td></tr><tr><td>26</td><td>31</td><td class='num'>300.897, -89.091</td><td class='num'>300.836, -89.170</td><td class='num'>300.898, -89.091</td><td class='num'>0.100</td><td class='num'>0.001</td></tr><tr><td>27</td><td>32</td><td class='num'>302.662, -90.226</td><td class='num'>302.598, -90.304</td><td class='num'>302.660, -90.225</td><td class='num'>0.101</td><td class='num'>0.001</td></tr><tr><td>28</td><td>33</td><td class='num'>304.382, -91.347</td><td class='num'>304.320, -91.426</td><td class='num'>304.383, -91.347</td><td class='num'>0.100</td><td class='num'>0.000</td></tr><tr><td>29</td><td>34</td><td class='num'>306.155, -92.535</td><td class='num'>306.093, -92.614</td><td class='num'>306.155, -92.535</td><td class='num'>0.100</td><td class='num'>0.000</td></tr><tr><td>30</td><td>35</td><td class='num'>307.817, -93.701</td><td class='num'>307.755, -93.780</td><td class='num'>307.817, -93.701</td><td class='num'>0.100</td><td class='num'>0.000</td></tr><tr><td>34</td><td>36</td><td class='num'>77.392, -12.054</td><td class='num'>77.222, -12.036</td><td class='num'>77.391, -12.054</td><td class='num'>0.171</td><td class='num'>0.001</td></tr><tr><td>36</td><td>37</td><td class='num'>98.273, -15.525</td><td class='num'>98.288, -15.386</td><td class='num'>98.273, -15.525</td><td class='num'>0.140</td><td class='num'>0.001</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Signals — 中心偏移明细（前 200 条）</h2>
+  <div class="card">
+    <table>
+      <thead><tr>
+        <th>JSON ID</th><th>XODR ID</th>
+        <th class="num">JSON中心 (x, y)</th>
+        <th class="num">XODR中心-锚点 (x, y)</th>
+        <th class="num">XODR中心-质心 (x, y)</th>
+        <th class="num">Δ锚点(m)</th>
+        <th class="num">Δ质心(m)</th>
+      </tr></thead>
+      <tbody>
+        <tr><td colspan='7' style='text-align:center;'>暂无数据</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Objects/Signals — 综述明细（前 200 条）</h2>
+  <div class="card">
+    <table>
+      <thead><tr>
+        <th>JSON ID</th><th>XODR ID</th>
+        <th class="num">Δ锚点(m)</th>
+        <th class="num">Δ质心(m)</th>
+        <th class="num">JSON点数</th><th class="num">XODR点数</th>
+        <th class="num">Chamfer均值(m)</th><th class="num">Chamfer最大(m)</th>
+        <th>轮廓判定</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>polyline_1</td><td>1</td><td class='num'>3.171</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>polyline_6</td><td>2</td><td class='num'>0.839</td><td class='num'>0.001</td><td class='num'>8</td><td class='num'>8</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>polyline_21</td><td>5</td><td class='num'>9.133</td><td class='num'>23.346</td><td class='num'>52</td><td class='num'>29</td><td class='num'>23.265</td><td class='num'>60.580</td><td><span class='badge fail'>失败</span></td></tr><tr><td>polyline_38</td><td>4</td><td class='num'>11.944</td><td class='num'>0.001</td><td class='num'>14</td><td class='num'>14</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>polyline_39</td><td>3</td><td class='num'>28.695</td><td class='num'>23.348</td><td class='num'>29</td><td class='num'>52</td><td class='num'>23.265</td><td class='num'>60.578</td><td><span class='badge fail'>失败</span></td></tr><tr><td>1</td><td>6</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>2</td><td>7</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>3</td><td>8</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>4</td><td>9</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>5</td><td>10</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>6</td><td>11</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>7</td><td>12</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>8</td><td>13</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>9</td><td>14</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>10</td><td>15</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>11</td><td>16</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>12</td><td>17</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>13</td><td>18</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>14</td><td>19</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>15</td><td>20</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>16</td><td>21</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>17</td><td>22</td><td class='num'>0.100</td><td class='num'>0.000</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.000</td><td class='num'>0.000</td><td><span class='badge pass'>通过</span></td></tr><tr><td>18</td><td>23</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>19</td><td>24</td><td class='num'>0.100</td><td class='num'>0.000</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.000</td><td class='num'>0.000</td><td><span class='badge pass'>通过</span></td></tr><tr><td>20</td><td>25</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>21</td><td>26</td><td class='num'>0.100</td><td class='num'>0.000</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.000</td><td class='num'>0.000</td><td><span class='badge pass'>通过</span></td></tr><tr><td>22</td><td>27</td><td class='num'>0.100</td><td class='num'>0.000</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.000</td><td class='num'>0.000</td><td><span class='badge pass'>通过</span></td></tr><tr><td>23</td><td>28</td><td class='num'>0.100</td><td class='num'>0.000</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.000</td><td class='num'>0.000</td><td><span class='badge pass'>通过</span></td></tr><tr><td>24</td><td>29</td><td class='num'>0.100</td><td class='num'>0.000</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.000</td><td class='num'>0.000</td><td><span class='badge pass'>通过</span></td></tr><tr><td>25</td><td>30</td><td class='num'>0.101</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>26</td><td>31</td><td class='num'>0.100</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>27</td><td>32</td><td class='num'>0.101</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>28</td><td>33</td><td class='num'>0.100</td><td class='num'>0.000</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.000</td><td class='num'>0.000</td><td><span class='badge pass'>通过</span></td></tr><tr><td>29</td><td>34</td><td class='num'>0.100</td><td class='num'>0.000</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.000</td><td class='num'>0.000</td><td><span class='badge pass'>通过</span></td></tr><tr><td>30</td><td>35</td><td class='num'>0.100</td><td class='num'>0.000</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.000</td><td class='num'>0.000</td><td><span class='badge pass'>通过</span></td></tr><tr><td>34</td><td>36</td><td class='num'>0.171</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr><tr><td>36</td><td>37</td><td class='num'>0.140</td><td class='num'>0.001</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td><span class='badge pass'>通过</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;">Signals 明细（前 200 条）</h3>
+    <table>
+      <thead><tr>
+        <th>JSON ID</th><th>XODR ID</th>
+        <th class="num">Δ锚点(m)</th>
+        <th class="num">Δ质心(m)</th>
+        <th class="num">JSON点数</th><th class="num">XODR点数</th>
+        <th class="num">Chamfer均值(m)</th><th class="num">Chamfer最大(m)</th>
+        <th>轮廓判定</th>
+      </tr></thead>
+      <tbody>
+        <tr><td colspan='9' style='text-align:center;'>暂无数据</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>告警列表</h2>
+  <div class="card"><p class='muted'>无</p></div>
+
+  <div class="footer">
+    位置阈值（曲线一致性）：0.100 m。对象/标识位置口径说明：<br/>
+    • 锚点：JSON 质心 ↔ XODR (s,t) 世界坐标（对象参考点，可能不在几何中心）；<br/>
+    • 质心：JSON 质心 ↔ XODR outline 质心（当 XODR 存在 outline 时）。<br/>
+    轮廓一致性：对称 Chamfer（双向最近邻距离的均值与最大值）。
+  </div>
+
+</div>
+</body>
+</html>
