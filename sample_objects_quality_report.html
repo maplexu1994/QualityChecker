@@ -25,17 +25,14 @@
   .legend { color:#555; font-size: 13px; }
   .footer { color:#777; font-size: 12px; margin-top: 28px; }
   .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid transparent; }
-  .badge.pass { background:#E6F4EA; color:#137333; border-color:#CFE9D6; }
-  .badge.warn { background:#FEF7E0; color:#B06000; border-color:#F3D89C; }
-  .badge.fail { background:#FDE7E9; color:#B3261E; border-color:#F4C7C9; }
-  .badge.miss { background:#E7F3FF; color:#01579B; border-color:#CDE7FF; }
+  .badge.tag { background:#eef; color:#225; border-color:#dde; }
 </style>
 </head>
 <body>
 <div class="container">
 
   <h1>JSON → XODR 质检报告</h1>
-  <div class="meta">生成时间：2025-08-28 12:01:36</div>
+  <div class="meta">生成时间：2025-08-28 15:48:20</div>
   <div class="meta">JSON 文件：sample_objects.json</div>
   <div class="meta">XODR 文件：sample_objects.xodr</div>
 
@@ -47,26 +44,59 @@
       <div class="legend">依据：车道/边界/物体/标识数量对比</div>
     </div>
     <div class="card">
-      <div class="muted">一致性得分（曲线）</div>
-      <div class="kpi">98.8%</div>
-      <div class="legend">依据：JSON 边界点 ↔ XODR（参考线+车道边界）最近距离均值 vs 阈值（0.100 m）</div>
+      <div class="muted">一致性得分（曲线，v1.4）</div>
+      <div class="kpi">98.6%</div>
+      <div class="legend">按车道分组 + 跨路段拼接 + 边界指派；阈值 0.100 m</div>
     </div>
     <div class="card">
       <div class="muted">告警数量</div>
       <div class="kpi ok">0</div>
-      <div class="legend">曲线超阈值点：0/33</div>
+      <div class="legend">超阈值点：0/33</div>
     </div>
     <div class="card">
-      <div class="muted">对象/标识一致性得分</div>
+      <div class="muted">对象/标识一致性（综合）</div>
       <div class="kpi">100.0%</div>
-      <div class="legend">单项得分：max(0, 1 - d/(2·tol))；缺失记 0；tol = 0.200 m</div>
+      <div class="legend">基于轮廓 Chamfer（按样本数加权）</div>
     </div>
   </div>
 
-  <h2>一致性检查（曲线）</h2>
+  <!-- 新增：对象 / 标识 两张独立摘要卡（不删原有卡片） -->
+  <div class="grid2" style="margin-top:12px;">
+    <div class="card">
+      <div class="muted">对象一致性（轮廓）</div>
+      <div class="kpi">100.0%</div>
+      <div class="legend">均值: 0.000 m；最大: 0.000 m；通过/警告/失败/缺失: 4/0/0/0</div>
+    </div>
+    <div class="card">
+      <div class="muted">标识一致性（轮廓）</div>
+      <div class="kpi">—</div>
+      <div class="legend">均值: — m；最大: — m；通过/警告/失败/缺失: 0/0/0/0</div>
+    </div>
+  </div>
+
+  <h2>完整性检查</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>要素</th><th class="num">JSON 数量</th><th class="num">XODR 数量</th><th class="num">子分数</th></tr>
+      </thead>
+      <tbody>
+        
+          <tr><td>车道（driving）</td><td class="num">8</td><td class="num">13</td><td class="num">1.00</td></tr>
+          <tr><td>边界（唯一ID vs 拓扑边界）</td><td class="num">11</td><td class="num">13</td><td class="num">1.00</td></tr>
+          <tr><td>物体（objects）</td><td class="num">4</td><td class="num">4</td><td class="num">1.00</td></tr>
+          <tr><td>标识（sign → signal）</td><td class="num">0</td><td class="num">0</td><td class="num">1.00</td></tr>
+        
+      </tbody>
+    </table>
+    <div class="muted">说明：XODR 数量可能大于 JSON（例如拓扑边界拆分、道路拼接等）；子分数按 min(XODR/JSON, 1.0) 计算。</div>
+  </div>
+
+  <h2>一致性检查（曲线） <span class="badge tag">v1.4 分组启用</span></h2>
   <div class="grid3">
     <div class="card">
       <div class="muted">平均偏移</div><div class="kpi">0.001 m</div>
+      <div class="legend">匹配车道：8；映射边界：11</div>
     </div>
     <div class="card">
       <div class="muted">最大 / 最小偏移</div><div class="kpi">0.021 / 0.000 m</div>
@@ -76,68 +106,15 @@
       <div class="legend">仅包含 JSON 边界点</div>
     </div>
   </div>
-  <div class="card"><div class="muted">分布 & 偏移热力</div><div class="imgwrap"><img src="sample_objects_visualization.png" style="max-width:100%;border:1px solid #eee;border-radius:8px;"></div></div>
+  <div class="card"><div class="muted">分布 & 偏移热力（示意）</div><div class="imgwrap"><img src="sample_objects_visualization.png" style="max-width:100%;border:1px solid #eee;border-radius:8px;"></div></div>
 
-  <h2>对象/标识一致性（v1.3.6，仅轮廓）</h2>
-  <div class="grid2">
-    <div class="card">
-      <h3>Objects</h3>
-      <div class="legend">匹配：4/4（XODR 4）</div>
-      <div class="legend">Chamfer 均值（平均）：0.000 m；最大：0.000 m</div>
-      <div class="legend">一致性得分：100.0%</div>
-      <div class="legend">判定统计：<span class='badge pass'>通过</span> 4；<span class='badge warn'>警告</span> 0；<span class='badge fail'>失败</span> 0；<span class='badge miss'>缺失</span> 0</div>
-    </div>
-    <div class="card">
-      <h3>Signals</h3>
-      <div class="legend">匹配：0/0（XODR 0）</div>
-      <div class="legend">Chamfer 均值（平均）：— m；最大：— m</div>
-      <div class="legend">一致性得分：—</div>
-      <div class="legend">判定统计：<span class='badge pass'>通过</span> 0；<span class='badge warn'>警告</span> 0；<span class='badge fail'>失败</span> 0；<span class='badge miss'>缺失</span> 0</div>
-    </div>
-  </div>
-
-  <h2>对象/标识 轮廓叠加</h2>
+  <h2>对象/标识一致性（轮廓）</h2>
   <div class="card">
-    <div class="muted">实线：JSON；虚线：XODR。重合度越高越好。</div>
     <div class="imgwrap"><img src="sample_objects_outline_overlay.png" style="max-width:100%;border:1px solid #eee;border-radius:8px;"></div>
-    <div class="legend">阈值 outline_tol = 0.200 m；判定：均值 ≤ tol → 通过；≤ 2·tol → 警告；其余 → 失败；任一侧缺失 → 缺失。</div>
+    <div class="muted">判定规则：阈值 <b>outline_tol = 0.200 m</b>；均值 ≤ tol → <b>通过</b>；≤ 2·tol → <b>警告</b>；其余 → <b>失败</b>；任一侧缺失 → <b>缺失</b>。</div>
   </div>
 
-  <h2>Objects 综述明细（前 200 条）</h2>
-  <div class="card">
-    <table>
-      <thead>
-        <tr>
-          <th>JSON ID</th><th>XODR ID</th>
-          <th class="num">JSON点数</th><th class="num">XODR点数</th>
-          <th class="num">Chamfer均值(m)</th><th class="num">Chamfer最大(m)</th>
-          <th class="num">单项得分</th><th>轮廓判定</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>1</td><td>0</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.000</td><td class='num'>0.000</td><td class='num'>100.0%</td><td><span class='badge pass'>通过</span></td></tr><tr><td>2</td><td>1</td><td class='num'>9</td><td class='num'>9</td><td class='num'>0.000</td><td class='num'>0.000</td><td class='num'>100.0%</td><td><span class='badge pass'>通过</span></td></tr><tr><td>3</td><td>2</td><td class='num'>9</td><td class='num'>9</td><td class='num'>0.000</td><td class='num'>0.000</td><td class='num'>100.0%</td><td><span class='badge pass'>通过</span></td></tr><tr><td>4</td><td>3</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.000</td><td class='num'>0.000</td><td class='num'>100.0%</td><td><span class='badge pass'>通过</span></td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h2>Signals 综述明细（前 200 条）</h2>
-  <div class="card">
-    <table>
-      <thead>
-        <tr>
-          <th>JSON ID</th><th>XODR ID</th>
-          <th class="num">JSON点数</th><th class="num">XODR点数</th>
-          <th class="num">Chamfer均值(m)</th><th class="num">Chamfer最大(m)</th>
-          <th class="num">单项得分</th><th>轮廓判定</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td colspan='8' style='text-align:center;'>暂无数据</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h2>边界匹配明细（前 200 条）</h2>
+  <h2>边界匹配明细（前 200 条，表格最近邻仅用于可视化示意）</h2>
   <div class="card">
     <table>
       <thead>
@@ -145,7 +122,7 @@
           <th class="num">序号</th>
           <th>类型</th>
           <th>JSON 坐标 (x, y)</th>
-          <th>最近 XODR 坐标 (x, y)</th>
+          <th>最近 XODR 坐标 (x, y)（示意）</th>
           <th class="num">偏移 (m)</th>
           <th>判定</th>
         </tr>
@@ -154,15 +131,15 @@
         <tr><td class='num'>0</td><td>bound</td><td>(0.000, 10.500)</td><td>(0.000, 10.500)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>1</td><td>bound</td><td>(-10.000, 10.500)</td><td>(-10.000, 10.500)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>2</td><td>bound</td><td>(-50.000, 10.500)</td><td>(-50.000, 10.500)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>3</td><td>bound</td><td>(-50.000, 7.000)</td><td>(-50.000, 7.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>4</td><td>bound</td><td>(-10.000, 7.000)</td><td>(-10.000, 7.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>5</td><td>bound</td><td>(0.000, 7.000)</td><td>(0.000, 7.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>6</td><td>bound</td><td>(-50.000, 3.500)</td><td>(-50.000, 3.500)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>7</td><td>bound</td><td>(-10.000, 3.500)</td><td>(-10.000, 3.500)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>8</td><td>bound</td><td>(0.000, 3.500)</td><td>(0.000, 3.500)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>9</td><td>bound</td><td>(-50.000, 0.000)</td><td>(-50.000, 0.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>10</td><td>bound</td><td>(-10.000, 0.000)</td><td>(-10.000, 0.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>11</td><td>bound</td><td>(0.000, 0.000)</td><td>(0.000, 0.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>12</td><td>bound</td><td>(0.000, 10.500)</td><td>(0.000, 10.500)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>13</td><td>bound</td><td>(20.000, 10.500)</td><td>(20.000, 10.500)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>14</td><td>bound</td><td>(40.000, 10.500)</td><td>(40.000, 10.500)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>15</td><td>bound</td><td>(0.000, 7.000)</td><td>(0.000, 7.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>16</td><td>bound</td><td>(20.000, 7.000)</td><td>(20.000, 7.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>17</td><td>bound</td><td>(40.000, 7.000)</td><td>(40.000, 7.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>18</td><td>bound</td><td>(0.000, 3.500)</td><td>(0.000, 3.500)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>19</td><td>bound</td><td>(20.000, 3.500)</td><td>(20.000, 3.500)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>20</td><td>bound</td><td>(40.000, 3.500)</td><td>(40.000, 3.500)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>21</td><td>bound</td><td>(0.000, 0.000)</td><td>(0.000, 0.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>22</td><td>bound</td><td>(20.000, 0.000)</td><td>(20.000, 0.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>23</td><td>bound</td><td>(40.000, 0.000)</td><td>(40.000, 0.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>24</td><td>bound</td><td>(0.000, 7.000)</td><td>(0.000, 7.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>25</td><td>bound</td><td>(11.500, 5.200)</td><td>(11.500, 5.200)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>26</td><td>bound</td><td>(31.800, -6.000)</td><td>(31.800, -6.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>27</td><td>bound</td><td>(0.000, 3.500)</td><td>(0.000, 3.500)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>28</td><td>bound</td><td>(10.000, 2.000)</td><td>(10.021, 1.994)</td><td class='num'>0.021</td><td>✅ Pass</td></tr><tr><td class='num'>29</td><td>bound</td><td>(30.000, -9.000)</td><td>(29.999, -9.000)</td><td class='num'>0.001</td><td>✅ Pass</td></tr><tr><td class='num'>30</td><td>bound</td><td>(0.000, 0.000)</td><td>(0.000, 0.000)</td><td class='num'>0.000</td><td>✅ Pass</td></tr><tr><td class='num'>31</td><td>bound</td><td>(9.000, -1.200)</td><td>(9.017, -1.202)</td><td class='num'>0.017</td><td>✅ Pass</td></tr><tr><td class='num'>32</td><td>bound</td><td>(28.200, -12.000)</td><td>(28.199, -11.999)</td><td class='num'>0.002</td><td>✅ Pass</td></tr>
       </tbody>
     </table>
+    <div class="muted">注：实际打分采用 v1.4 的“按 bound 指派”的距离，非本表展示的全局最近邻。</div>
   </div>
 
   <h2>告警列表</h2>
   <div class="card"><p class='muted'>无</p></div>
 
   <div class="footer">
-    曲线一致性阈值：0.100 m。<br/>
-    对象/标识一致性：基于对称 Chamfer 距离（双向最近邻的均值/最大值）；单项得分＝max(0, 1 - d/(2·tol))，缺失 outline 记 0。<br/>
-    本报告仅用于 JSON→XODR 转换结果的自动化质检与可视化分析。
+    曲线一致性阈值：0.100 m；对象/标识轮廓阈值：0.200 m。<br/>
+    v1.4.2 采用“车道中心线多候选（重叠裁剪）→ 跨路段拼接 → 2×2 边界指派”的分组策略；无法匹配时自动回退到旧版全局最近邻。
   </div>
 
 </div>
