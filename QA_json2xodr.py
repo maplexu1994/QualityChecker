@@ -5,6 +5,7 @@ JSON to XODR Quality Checker — v1.7
 
 变更摘要（相对 v1.6）：
 - 功能：
+之后统一文件名QA_json2xodr，删除目录中的冗余项目
 增加_signal_rect_outline_world还原xodr中signal outline，
 更新sign/signal对应可视化
 更新html依据reports/figures路径找图
