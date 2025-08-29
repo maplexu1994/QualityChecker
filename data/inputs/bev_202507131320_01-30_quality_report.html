@@ -1,0 +1,188 @@
+<!doctype html>
+    <html lang="zh-CN">
+    <head>
+    <meta charset="utf-8" />
+    <title>JSON→XODR 质检报告</title>
+    <style>
+      html,body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans CJK SC","Microsoft YaHei","PingFang SC",sans-serif;color:#222; }
+      .container { max-width: 1100px; margin: 32px auto; padding: 0 16px; }
+      h1 { font-size: 26px; margin: 0 0 6px; }
+      h2 { font-size: 20px; margin: 28px 0 12px; border-left:4px solid #555; padding-left:8px; }
+      h3 { font-size: 16px; margin: 18px 0 10px; }
+      .meta,.muted { color:#666; font-size: 13px; }
+      .grid3 { display:grid; grid-template-columns: repeat(3,1fr); gap:12px; }
+      .grid2 { display:grid; grid-template-columns: repeat(2,1fr); gap:12px; }
+      .card { border:1px solid #e6e6e6; border-radius:10px; padding:12px 14px; background:#fff; }
+      .kpi { font-size: 22px; font-weight:600; }
+      .ok { color:#138000; } .warn { color:#d97706; } .bad { color:#b91c1c; }
+      table { width:100%; border-collapse: collapse; font-size: 13px; }
+      th,td { border-bottom:1px solid #eee; padding:8px 10px; text-align:left; }
+      th { background:#fafafa; }
+      td.num,th.num { text-align:right; font-variant-numeric: tabular-nums; }
+      .imgwrap { text-align:center; margin: 14px 0 6px; }
+      .warning-list { margin:6px 0 0 16px; }
+      .legend { color:#555; font-size: 13px; }
+      .footer { color:#777; font-size: 12px; margin-top: 28px; }
+      .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid transparent; }
+      .badge.tag { background:#eef; color:#225; border-color:#dde; }
+    </style>
+    </head>
+    <body>
+    <div class="container">
+
+      <h1>JSON → XODR 质检报告</h1>
+      <div class="meta">生成时间：2025-08-29 11:30:26</div>
+      <div class="meta">JSON 文件：data\inputs\bev_202507131320_01-30.json</div>
+      <div class="meta">XODR 文件：data\inputs\bev_202507131320_01-30.xodr</div>
+
+      <h2>摘要</h2>
+      <div class="grid3">
+        <div class="card">
+          <div class="muted">完整性得分</div>
+          <div class="kpi">100.0%</div>
+          <div class="legend">依据：车道/边界/物体/标识数量对比</div>
+        </div>
+        <div class="card">
+          <div class="muted">一致性得分（曲线，v1.4）</div>
+          <div class="kpi">55.1%</div>
+          <div class="legend">按车道分组 + 跨路段拼接 + 边界指派；阈值 0.100 m</div>
+        </div>
+        <div class="card">
+          <div class="muted">告警数量</div>
+          <div class="kpi warn">4</div>
+          <div class="legend">超阈值点：4/52</div>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:12px;">
+        <div class="card">
+          <div class="muted">对象一致性（轮廓）</div>
+          <div class="kpi">99.9%</div>
+          <div class="legend">均值: 0.000 m；最大: 0.000 m；通过/警告/失败/缺失: 2/0/0/0</div>
+        </div>
+        <div class="card">
+          <div class="muted">标识一致性（轮廓）</div>
+          <div class="kpi">—</div>
+          <div class="legend">均值: — m；最大: — m；通过/警告/失败/缺失: 0/0/0/0</div>
+        </div>
+      </div>
+
+      <h2>完整性检查</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>要素</th><th class="num">JSON 数量</th><th class="num">XODR 数量</th><th class="num">子分数</th></tr>
+          </thead>
+          <tbody>
+            
+          <tr><td>车道（driving）</td><td class="num">3</td><td class="num">3</td><td class="num">1.00</td></tr>
+          <tr><td>边界（唯一ID vs 拓扑边界）</td><td class="num">4</td><td class="num">4</td><td class="num">1.00</td></tr>
+          <tr><td>物体（objects）</td><td class="num">2</td><td class="num">2</td><td class="num">1.00</td></tr>
+          <tr><td>标识（sign → signal）</td><td class="num">0</td><td class="num">0</td><td class="num">1.00</td></tr>
+        
+          </tbody>
+        </table>
+        <div class="muted">说明：XODR 数量可能大于 JSON（例如拓扑边界拆分、道路拼接等）；子分数按 min(XODR/JSON, 1.0) 计算。</div>
+      </div>
+
+      <h2>一致性检查（曲线） <span class="badge tag">v1.4 分组启用</span></h2>
+      <div class="grid3">
+        <div class="card">
+          <div class="muted">平均偏移</div><div class="kpi">0.045 m</div>
+          <div class="legend">匹配车道：3；映射边界：4</div>
+        </div>
+        <div class="card">
+          <div class="muted">最大 / 最小偏移</div><div class="kpi">0.478 / 0.000 m</div>
+        </div>
+        <div class="card">
+          <div class="muted">参与点数</div><div class="kpi">52</div>
+          <div class="legend">仅包含 JSON 边界点</div>
+        </div>
+      </div>
+      <div class="card"><div class="muted">分布 & 偏移热力（示意）</div><div class="imgwrap"><img src="data\inputs\bev_202507131320_01-30_visualization.png" style="max-width:100%;border:1px solid #eee;border-radius:8px;"></div></div>
+
+      <h2>对象/标识一致性（轮廓）</h2>
+      <div class="card">
+        <div class="imgwrap"><img src="data\inputs\bev_202507131320_01-30_outline_overlay.png" style="max-width:100%;border:1px solid #eee;border-radius:8px;"></div>
+        <div class="muted">判定规则：阈值 <b>outline_tol = 0.200 m</b>；均值 ≤ tol → <b>通过</b>；≤ 2·tol → <b>警告</b>；其余 → <b>失败</b>；任一侧缺失 → <b>缺失</b>。</div>
+      </div>
+
+      <!-- 精简后的：按 bound 指派（用于打分）的明细表 -->
+      <h2>边界匹配明细（按 bound 指派，用于打分，前 200 条）</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">序号</th>
+              <th>类型</th>
+              <th>Bound ID</th>
+              <th>JSON 坐标 (x, y)</th>
+              <th>最近 XODR 坐标 (x, y)（示意）</th>
+              <th class="num">偏移 (m)</th>
+              <th>判定</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class='num'>0</td><td>bound</td><td>2</td><td>(306.282, 26.499)</td><td>(305.808, 26.437)</td><td class='num'>0.478</td><td>❌ 失败</td></tr><tr><td class='num'>1</td><td>bound</td><td>3</td><td>(306.769, 22.680)</td><td>(306.382, 22.630)</td><td class='num'>0.390</td><td>❌ 失败</td></tr><tr><td class='num'>2</td><td>bound</td><td>4</td><td>(8.178, -2.216)</td><td>(8.515, -2.214)</td><td class='num'>0.337</td><td>❌ 失败</td></tr><tr><td class='num'>3</td><td>bound</td><td>1</td><td>(7.430, 8.927)</td><td>(7.725, 8.929)</td><td class='num'>0.295</td><td>❌ 失败</td></tr><tr><td class='num'>4</td><td>bound</td><td>1</td><td>(91.850, 10.899)</td><td>(91.855, 10.852)</td><td class='num'>0.048</td><td>✅ 通过</td></tr><tr><td class='num'>5</td><td>bound</td><td>2</td><td>(92.612, 7.326)</td><td>(92.589, 7.285)</td><td class='num'>0.047</td><td>✅ 通过</td></tr><tr><td class='num'>6</td><td>bound</td><td>4</td><td>(92.668, -0.244)</td><td>(92.692, -0.277)</td><td class='num'>0.041</td><td>✅ 通过</td></tr><tr><td class='num'>7</td><td>bound</td><td>3</td><td>(92.863, 3.476)</td><td>(92.848, 3.439)</td><td class='num'>0.039</td><td>✅ 通过</td></tr><tr><td class='num'>8</td><td>bound</td><td>4</td><td>(26.546, -2.088)</td><td>(26.555, -2.058)</td><td class='num'>0.032</td><td>✅ 通过</td></tr><tr><td class='num'>9</td><td>bound</td><td>3</td><td>(26.740, 1.631)</td><td>(26.724, 1.658)</td><td class='num'>0.031</td><td>✅ 通过</td></tr><tr><td class='num'>10</td><td>bound</td><td>1</td><td>(25.728, 9.055)</td><td>(25.712, 9.081)</td><td class='num'>0.030</td><td>✅ 通过</td></tr><tr><td class='num'>11</td><td>bound</td><td>3</td><td>(140.910, 6.255)</td><td>(140.932, 6.276)</td><td class='num'>0.030</td><td>✅ 通过</td></tr><tr><td class='num'>12</td><td>bound</td><td>2</td><td>(26.490, 5.482)</td><td>(26.483, 5.508)</td><td class='num'>0.027</td><td>✅ 通过</td></tr><tr><td class='num'>13</td><td>bound</td><td>3</td><td>(195.088, 10.559)</td><td>(195.102, 10.579)</td><td class='num'>0.024</td><td>✅ 通过</td></tr><tr><td class='num'>14</td><td>bound</td><td>4</td><td>(250.149, 12.076)</td><td>(250.169, 12.090)</td><td class='num'>0.024</td><td>✅ 通过</td></tr><tr><td class='num'>15</td><td>bound</td><td>2</td><td>(163.647, 11.827)</td><td>(163.624, 11.826)</td><td class='num'>0.023</td><td>✅ 通过</td></tr><tr><td class='num'>16</td><td>bound</td><td>4</td><td>(55.609, -1.578)</td><td>(55.623, -1.560)</td><td class='num'>0.022</td><td>✅ 通过</td></tr><tr><td class='num'>17</td><td>bound</td><td>3</td><td>(250.344, 15.796)</td><td>(250.323, 15.802)</td><td class='num'>0.021</td><td>✅ 通过</td></tr><tr><td class='num'>18</td><td>bound</td><td>2</td><td>(140.659, 10.106)</td><td>(140.675, 10.121)</td><td class='num'>0.021</td><td>✅ 通过</td></tr><tr><td class='num'>19</td><td>bound</td><td>4</td><td>(140.715, 2.536)</td><td>(140.723, 2.556)</td><td class='num'>0.021</td><td>✅ 通过</td></tr><tr><td class='num'>20</td><td>bound</td><td>1</td><td>(80.394, 10.338)</td><td>(80.374, 10.333)</td><td class='num'>0.021</td><td>✅ 通过</td></tr><tr><td class='num'>21</td><td>bound</td><td>4</td><td>(194.893, 6.840)</td><td>(194.895, 6.859)</td><td class='num'>0.020</td><td>✅ 通过</td></tr><tr><td class='num'>22</td><td>bound</td><td>4</td><td>(223.636, 9.574)</td><td>(223.647, 9.591)</td><td class='num'>0.020</td><td>✅ 通过</td></tr><tr><td class='num'>23</td><td>bound</td><td>4</td><td>(282.936, 15.880)</td><td>(282.954, 15.885)</td><td class='num'>0.019</td><td>✅ 通过</td></tr><tr><td class='num'>24</td><td>bound</td><td>1</td><td>(194.075, 17.983)</td><td>(194.056, 17.987)</td><td class='num'>0.019</td><td>✅ 通过</td></tr><tr><td class='num'>25</td><td>bound</td><td>4</td><td>(81.212, -0.805)</td><td>(81.227, -0.795)</td><td class='num'>0.018</td><td>✅ 通过</td></tr><tr><td class='num'>26</td><td>bound</td><td>4</td><td>(163.703, 4.257)</td><td>(163.718, 4.265)</td><td class='num'>0.017</td><td>✅ 通过</td></tr><tr><td class='num'>27</td><td>bound</td><td>1</td><td>(162.885, 15.401)</td><td>(162.871, 15.391)</td><td class='num'>0.017</td><td>✅ 通过</td></tr><tr><td class='num'>28</td><td>bound</td><td>3</td><td>(55.804, 2.142)</td><td>(55.814, 2.155)</td><td class='num'>0.016</td><td>✅ 通过</td></tr><tr><td class='num'>29</td><td>bound</td><td>3</td><td>(116.862, 4.692)</td><td>(116.850, 4.698)</td><td class='num'>0.014</td><td>✅ 通过</td></tr><tr><td class='num'>30</td><td>bound</td><td>1</td><td>(249.331, 23.219)</td><td>(249.317, 23.218)</td><td class='num'>0.014</td><td>✅ 通过</td></tr><tr><td class='num'>31</td><td>bound</td><td>2</td><td>(194.837, 14.410)</td><td>(194.839, 14.423)</td><td class='num'>0.014</td><td>✅ 通过</td></tr><tr><td class='num'>32</td><td>bound</td><td>2</td><td>(55.553, 5.992)</td><td>(55.543, 6.002)</td><td class='num'>0.014</td><td>✅ 通过</td></tr><tr><td class='num'>33</td><td>bound</td><td>3</td><td>(81.407, 2.915)</td><td>(81.394, 2.920)</td><td class='num'>0.014</td><td>✅ 通过</td></tr><tr><td class='num'>34</td><td>bound</td><td>1</td><td>(282.118, 27.023)</td><td>(282.105, 27.021)</td><td class='num'>0.013</td><td>✅ 通过</td></tr><tr><td class='num'>35</td><td>bound</td><td>2</td><td>(250.093, 19.646)</td><td>(250.104, 19.650)</td><td class='num'>0.012</td><td>✅ 通过</td></tr><tr><td class='num'>36</td><td>bound</td><td>3</td><td>(223.831, 13.294)</td><td>(223.827, 13.304)</td><td class='num'>0.011</td><td>✅ 通过</td></tr><tr><td class='num'>37</td><td>bound</td><td>1</td><td>(115.850, 12.115)</td><td>(115.859, 12.109)</td><td class='num'>0.011</td><td>✅ 通过</td></tr><tr><td class='num'>38</td><td>bound</td><td>3</td><td>(163.898, 7.977)</td><td>(163.905, 7.983)</td><td class='num'>0.010</td><td>✅ 通过</td></tr><tr><td class='num'>39</td><td>bound</td><td>2</td><td>(81.156, 6.765)</td><td>(81.147, 6.767)</td><td class='num'>0.009</td><td>✅ 通过</td></tr><tr><td class='num'>40</td><td>bound</td><td>4</td><td>(116.667, 0.972)</td><td>(116.667, 0.980)</td><td class='num'>0.008</td><td>✅ 通过</td></tr><tr><td class='num'>41</td><td>bound</td><td>2</td><td>(223.580, 17.144)</td><td>(223.585, 17.150)</td><td class='num'>0.007</td><td>✅ 通过</td></tr><tr><td class='num'>42</td><td>bound</td><td>1</td><td>(54.792, 9.566)</td><td>(54.794, 9.572)</td><td class='num'>0.007</td><td>✅ 通过</td></tr><tr><td class='num'>43</td><td>bound</td><td>2</td><td>(116.611, 8.542)</td><td>(116.616, 8.545)</td><td class='num'>0.006</td><td>✅ 通过</td></tr><tr><td class='num'>44</td><td>bound</td><td>2</td><td>(282.879, 23.450)</td><td>(282.874, 23.451)</td><td class='num'>0.006</td><td>✅ 通过</td></tr><tr><td class='num'>45</td><td>bound</td><td>1</td><td>(222.819, 20.718)</td><td>(222.824, 20.718)</td><td class='num'>0.006</td><td>✅ 通过</td></tr><tr><td class='num'>46</td><td>bound</td><td>3</td><td>(283.131, 19.599)</td><td>(283.126, 19.603)</td><td class='num'>0.005</td><td>✅ 通过</td></tr><tr><td class='num'>47</td><td>bound</td><td>1</td><td>(139.898, 13.679)</td><td>(139.894, 13.683)</td><td class='num'>0.005</td><td>✅ 通过</td></tr><tr><td class='num'>48</td><td>bound</td><td>3</td><td>(8.252, 1.502)</td><td>(8.252, 1.502)</td><td class='num'>0.001</td><td>✅ 通过</td></tr><tr><td class='num'>49</td><td>bound</td><td>4</td><td>(306.929, 19.006)</td><td>(306.929, 19.006)</td><td class='num'>0.000</td><td>✅ 通过</td></tr><tr><td class='num'>50</td><td>bound</td><td>1</td><td>(305.265, 30.039)</td><td>(305.265, 30.039)</td><td class='num'>0.000</td><td>✅ 通过</td></tr><tr><td class='num'>51</td><td>bound</td><td>2</td><td>(7.979, 5.353)</td><td>(7.978, 5.353)</td><td class='num'>0.000</td><td>✅ 通过</td></tr>
+          </tbody>
+        </table>
+        <div class="muted">注：偏移 (m) 为按 bound 指派的距离；若某点未能指派显示 “—”。最近 XODR 坐标仅用于可视化示意，不参与打分。</div>
+      </div>
+
+      <h2>对象轮廓匹配明细（前 200 条）</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">序号</th>
+              <th>JSON 对象ID</th>
+              <th>XODR 对象ID</th>
+              <th class="num">JSON 点数</th>
+              <th class="num">XODR 点数</th>
+              <th class="num">Chamfer 均值 (m)</th>
+              <th class="num">最大 (m)</th>
+              <th>判定</th>
+              <th class="num">得分</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class='num'>0</td><td>polyline_5</td><td>1</td><td class='num'>13</td><td class='num'>13</td><td class='num'>0.000</td><td class='num'>0.000</td><td>通过</td><td class='num'>100%</td></tr><tr><td class='num'>1</td><td>polyline_6</td><td>2</td><td class='num'>14</td><td class='num'>14</td><td class='num'>0.000</td><td class='num'>0.000</td><td>通过</td><td class='num'>100%</td></tr>
+          </tbody>
+        </table>
+        <div class="muted">注：对象轮廓匹配基于 Chamfer 距离；判定与阈值规则同上。</div>
+      </div>
+
+      <h2>标识轮廓匹配明细（前 200 条）</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">序号</th>
+              <th>JSON 标识ID</th>
+              <th>XODR 标识ID</th>
+              <th class="num">JSON 点数</th>
+              <th class="num">XODR 点数</th>
+              <th class="num">Chamfer 均值 (m)</th>
+              <th class="num">最大 (m)</th>
+              <th>判定</th>
+              <th class="num">得分</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan='9' style='text-align:center;'>暂无数据</td></tr>
+          </tbody>
+        </table>
+        <div class="muted">注：标识轮廓匹配基于 Chamfer 距离；判定与阈值规则同上。</div>
+      </div>
+
+      <h2>告警列表</h2>
+      <div class="card"><ul class='warning-list'><li>⚠️ 边界点偏移超阈值: (7.430, 8.927) → 0.295m</li><li>⚠️ 边界点偏移超阈值: (306.282, 26.499) → 0.478m</li><li>⚠️ 边界点偏移超阈值: (306.769, 22.680) → 0.390m</li><li>⚠️ 边界点偏移超阈值: (8.178, -2.216) → 0.337m</li></ul></div>
+
+      <div class="footer">
+        曲线一致性阈值：0.100 m；对象/标识轮廓阈值：0.200 m。<br/>
+        本报告采用 v1.4 的“车道中心多候选→跨路段拼接→2×2 指派”，无法指派时回退到全局最近邻用于统计与明细展示。
+      </div>
+
+    </div>
+    </body>
+    </html>

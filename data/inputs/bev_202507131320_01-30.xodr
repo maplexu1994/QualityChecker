@@ -1,0 +1,92 @@
+<?xml version='1.0' encoding='utf-8'?>
+<OpenDRIVE>
+    <header name="bev_202507131320_01-30" revMajor="1" revMinor="8" date="2025-08-26T15:45:05" north="35.039" south="-7.216" east="311.929" west="2.4299999999999997"/>
+    <road rule="RHT" id="1" junction="-1" length="298.5977392209313">
+        <link/>
+        <planView>
+            <geometry s="0" x="8.55667297793417" y="-2.8017999912908635" hdg="0.07077810109168937" length="298.5977392209313">
+                <arc curvature="0.00026428186171262926"/>
+            </geometry>
+        </planView>
+        <elevationProfile>
+            <elevation s="0.0" a="0.0" b="0.0" c="0.0" d="0.0"/>
+        </elevationProfile>
+        <lateralProfile/>
+        <lanes>
+            <laneOffset s="0.0" a="11.760244401282467" b="-0.06402295624155958" c="-6.399726242664144e-05" d="1.6864018136615312e-06"/>
+            <laneOffset s="37.949" a="9.330637234871523" b="-0.06159432412973098" c="0.00019305095589558865" d="-2.6884663885311792e-06"/>
+            <laneOffset s="65.911" a="7.700500903567768" b="-0.05710426389506342" c="-3.961234195950413e-05" d="5.038915274413347e-05"/>
+            <laneOffset s="74.899" a="7.220634683948929" b="-0.04560440164016724" c="-5.590454585611949e-05" d="2.7535173729824344e-06"/>
+            <laneOffset s="112.848" a="5.559967103783238" b="-0.03795120401611208" c="7.030679552763135e-05" d="-3.31341894703327e-07"/>
+            <laneOffset s="180.756" a="3.2032340804153527" b="-0.032986362202129665" c="0.00028572873093983704" d="-5.44190862072596e-06"/>
+            <laneOffset s="215.709" a="2.166956901309979" b="-0.032957548143659185" c="-0.0006470095902904044" d="1.8309717343957574e-05"/>
+            <laneOffset s="241.674" a="1.1955261625999225" b="-0.02952455316238069" c="0.0002591391409020442" d="-2.617357731166781e-06"/>
+            <laneOffset s="276.627" a="0.36838017176407184" b="-0.021002146064943383" c="0.0003855528927622947" d="-8.774131645402911e-06"/>
+            <laneSection s="0">
+                <center>
+                    <lane id="0" type="none" level="false">
+                        <roadMark sOffset="0.0" type="solid" weight="standard" color="white" height="0.02" laneChange="none"/>
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link/>
+                        <width a="3.5850093444787317" b="0.00019320053546836348" c="0.0" d="0.0" sOffset="0.0"/>
+                        <roadMark sOffset="0.0" type="solid" weight="standard" color="white" height="0.02" laneChange="none"/>
+                    </lane>
+                    <lane id="-2" type="driving" level="false">
+                        <link/>
+                        <width a="3.860664450583604" b="-3.5617248620194386e-05" c="0.0" d="0.0" sOffset="0.0"/>
+                        <roadMark sOffset="0.0" type="solid" weight="standard" color="white" height="0.02" laneChange="none"/>
+                    </lane>
+                    <lane id="-3" type="driving" level="false">
+                        <link/>
+                        <width a="3.7252952903092384" b="-0.0002017636756467523" c="0.0" d="0.0" sOffset="0.0"/>
+                        <roadMark sOffset="0.0" type="solid" weight="standard" color="white" height="0.02" laneChange="none"/>
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects>
+            <object id="1" s="150.1066675878004" t="-7.6016422706020546" subtype="noise protections" dynamic="no" zOffset="0.0" pitch="0" roll="0" type="barrier" orientation="none" hdg="0">
+                <outlines>
+                    <outline closed="false">
+                        <cornerLocal u="-152.09138569361443" v="10.696037762462637" z="0.0" height="0.0"/>
+                        <cornerLocal u="-132.32452948056033" v="8.643392181128696" z="0.0" height="0.0"/>
+                        <cornerLocal u="-103.38151386161105" v="5.94738610044094" z="0.0" height="0.0"/>
+                        <cornerLocal u="-77.84982196775175" v="3.8933645945281414" z="0.0" height="0.0"/>
+                        <cornerLocal u="-66.401698036021" v="3.1880017543234542" z="0.0" height="0.0"/>
+                        <cornerLocal u="-42.414559608815956" v="1.7513863926124213" z="0.0" height="0.0"/>
+                        <cornerLocal u="-18.34066110532911" v="0.6550093834744652" z="0.0" height="0.0"/>
+                        <cornerLocal u="4.696389871681725" v="-0.16772456656494955" z="0.0" height="0.0"/>
+                        <cornerLocal u="35.98073095605618" v="-1.03904345033891" z="0.0" height="0.0"/>
+                        <cornerLocal u="64.85064242201199" v="-1.489233492912713" z="0.0" height="0.0"/>
+                        <cornerLocal u="91.47740538439709" v="-1.924919887906313" z="0.0" height="0.0"/>
+                        <cornerLocal u="124.48372107943152" v="-1.758716548399729" z="0.0" height="0.0"/>
+                        <cornerLocal u="152.46663636287892" v="-1.2232525528890061" z="0.0" height="0.0"/>
+                    </outline>
+                </outlines>
+            </object>
+            <object id="2" s="150.9156382777662" t="4.712824138932886" subtype="guard rail" dynamic="no" zOffset="0.0" pitch="0" roll="0" type="barrier" orientation="none" hdg="0">
+                <outlines>
+                    <outline closed="false">
+                        <cornerLocal u="-151.5592851586304" v="10.966524771166894" z="0.0" height="0.0"/>
+                        <cornerLocal u="-129.64756582468297" v="8.62817282272725" z="0.0" height="0.0"/>
+                        <cornerLocal u="-107.71468874305424" v="6.480266218217522" z="0.0" height="0.0"/>
+                        <cornerLocal u="-83.1155774580183" v="4.469888948548125" z="0.0" height="0.0"/>
+                        <cornerLocal u="-60.25162578167301" v="2.8933113837789115" z="0.0" height="0.0"/>
+                        <cornerLocal u="-36.81634458261368" v="1.6870402940272982" z="0.0" height="0.0"/>
+                        <cornerLocal u="-5.99074397352442" v="0.18977325139770118" z="0.0" height="0.0"/>
+                        <cornerLocal u="23.739783369743986" v="-0.7520227700371849" z="0.0" height="0.0"/>
+                        <cornerLocal u="49.894202166458165" v="-0.9108611788603795" z="0.0" height="0.0"/>
+                        <cornerLocal u="76.29725957680739" v="-1.4347240653092612" z="0.0" height="0.0"/>
+                        <cornerLocal u="88.84015989254878" v="-1.768066702433444" z="0.0" height="0.0"/>
+                        <cornerLocal u="119.45416336940427" v="-2.1332427991827245" z="0.0" height="0.0"/>
+                        <cornerLocal u="142.37099128910845" v="-2.3661244511794983" z="0.0" height="0.0"/>
+                        <cornerLocal u="151.93557536964644" v="-2.6095207820181194" z="0.0" height="0.0"/>
+                    </outline>
+                </outlines>
+            </object>
+        </objects>
+    </road>
+</OpenDRIVE>

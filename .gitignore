@@ -7,5 +7,5 @@ reports/**
 runs/**
 
 # 大体量原始数据（样本例外）
-data/inputs/**
+!data/inputs/**
 !data/samples/**
