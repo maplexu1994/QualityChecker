@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-JSON to XODR Quality Checker — v1.4.2
+JSON to XODR Quality Checker — v1.6
 
-变更摘要（相对 v1.3）：
-- 功能：采用“车道中心线分组匹配 + 跨 road 拼接边界 + 2×2 指派”的一致性计算，避免整段平移或跨段截断导致的误判（v1.4.1 方案并入）。
-- HTML：严格增量，不删除旧版模块：
-  · 摘要：保留 v1.3 的 4 张卡，并新增“对象一致性 / 标识一致性”两张独立摘要卡；
-  · 恢复 v1.2 的“完整性检查表格”（要素/JSON 数量/XODR 数量/子分数）；
-  · 恢复“outline_tol 判定规则”说明；
-  · 轮廓叠加图仍独立展示，不混入摘要图。
+变更摘要（相对 v1.5）：
+- 功能：修复无用的shared_id相关，增加结果自动导出至reports/figures, 增加部分代码注释。
 """
 
 import json
@@ -36,7 +31,7 @@ BOUND_RESAMPLE_STEP = 0.2   # JSON 边界折线重采样步长（米）
 LANE_CENTER_MATCH_GATE = 6.0   # 车道中心线匹配代价门限（Chamfer 均值，米）
 LANE_MATCH_OVERLAP_MARGIN = 2.0   # 中心线重叠裁剪 bbox 裕度（米）
 
-
+#定义质检报告中数据类型
 @dataclass
 class QualityReport:
     completeness_score: float = 0.0
@@ -50,16 +45,22 @@ class QualityReport:
         if self.details is None:
             self.details = {}
 
-
+#主键
 class QualityChecker:
     def __init__(self, json_file: str, xodr_file: str,
                  threshold: float = 0.1,    # 曲线一致性判定阈值（边界点 m）
-                 outline_tol: float = 0.20   # 轮廓一致性判定阈值（Chamfer 均值 m）
+                 outline_tol: float = 0.20,   # 轮廓一致性判定阈值（Chamfer 均值 m）
+                 reports_dir: str = "reports", figures_dir: str = "figures"
                  ):
         self.json_file = Path(json_file)
         self.xodr_file = Path(xodr_file)
         self.threshold = float(threshold)
         self.outline_tol = float(outline_tol)
+
+        self.reports_dir = Path(reports_dir)
+        self.figures_dir = Path(figures_dir)
+        self.reports_dir.mkdir(parents=True, exist_ok=True)
+        self.figures_dir.mkdir(parents=True, exist_ok=True)
 
         self.json_data = self._load_json()
         self.xodr_root = self._load_xodr()
@@ -106,22 +107,10 @@ class QualityChecker:
                 cnt += 1
         return cnt
 
-    def _detect_shared_bounds(self) -> Tuple[List[int], List[int]]:
-        lanes = self.json_data.get('lanes', [])
-        usage: Dict[int, int] = {}
-        for ln in lanes:
-            for key in ('left_bound_id', 'right_bound_id'):
-                bid = ln.get(key)
-                if bid is None:
-                    continue
-                usage[bid] = usage.get(bid, 0) + 1
-        if usage:
-            unique_ids = sorted(usage.keys())
-            shared_ids = sorted([bid for bid, c in usage.items() if c >= 2])
-            return unique_ids, shared_ids
+    def _detect_json_bounds(self) -> List[int]:
         b_ids = sorted({int(b.get('id'))
                        for b in self.json_data.get('bounds', []) if 'id' in b})
-        return b_ids, []
+        return b_ids
 
     def _count_xodr_topo_boundaries(self) -> int:
         total = 0
@@ -135,11 +124,11 @@ class QualityChecker:
                 l = len(left.findall('lane')) if left is not None else 0
                 r = len(right.findall('lane')) if right is not None else 0
                 if l > 0:
-                    total += l
+                    total += l + 1
                 if r > 0:
-                    total += r
+                    total += r + 1
                 if l > 0 and r > 0:
-                    total += 1  # 中央分隔
+                    total += -1  # 中央分隔
         return total
 
     def _count_xodr_objects(self) -> int:
@@ -164,12 +153,12 @@ class QualityChecker:
         total += lane_score
         n += 1
 
-        unique_ids, shared_ids = self._detect_shared_bounds()
+        unique_ids = self._detect_json_bounds()
         x_topo = self._count_xodr_topo_boundaries()
         bound_score = min(x_topo / max(1, len(unique_ids)),
                           1.0) if unique_ids else 1.0
         details['bounds'] = {'json_count': len(unique_ids), 'xodr_count': x_topo, 'score': bound_score,
-                             'unique_ids': unique_ids, 'shared_ids': shared_ids}
+                             'unique_ids': unique_ids}
         total += bound_score
         n += 1
 
@@ -197,7 +186,7 @@ class QualityChecker:
 
     # ---------- 参考线采样 & st→xy ----------
     @staticmethod
-    def _finite_diff_heading(xs, ys):
+    def _finite_diff_heading(xs, ys):#计算切向角度
         th = []
         n = len(xs)
         for i in range(n):
@@ -211,11 +200,11 @@ class QualityChecker:
         return th
 
     @staticmethod
-    def _local_to_global(x0, y0, hdg, u, v):
+    def _local_to_global(x0, y0, hdg, u, v): #把局部坐标系 (u,v) 转换成 全局坐标系 (x,y)
         ch, sh = math.cos(hdg), math.sin(hdg)
         return x0 + ch*u - sh*v, y0 + sh*u + ch*v
 
-    def _sample_planview_polyline(self, plan_view, step=DEFAULT_SAMPLE_STEP):
+    def _sample_planview_polyline(self, plan_view, step=DEFAULT_SAMPLE_STEP):#OpenDRIVE 里一条路的 planView（平面几何） 按固定步长“打成一串连续采样点”。最后返回一堆点，每个点是 (s绝对里程, x世界坐标, y世界坐标)
         ref_pts = []
         s_abs = 0.0
         geoms = list(plan_view.findall('geometry'))
@@ -289,7 +278,7 @@ class QualityChecker:
             hdg = self._finite_diff_heading(x, y)
             self._road_cache[rid] = {'s': s, 'x': x, 'y': y, 'hdg': hdg}
 
-    def _interp_ref_at(self, road_id: str, s: float) -> Optional[Tuple[float, float, float]]:
+    def _interp_ref_at(self, road_id: str, s: float) -> Optional[Tuple[float, float, float]]:#在指定道路 road_id 的参考线（已经采样好的折线）上，找到里程为 s 的位置，并“插值”出该位置的 (x, y, 航向角hdg)
         d = self._road_cache.get(road_id)
         if not d:
             return None
@@ -1171,7 +1160,7 @@ class QualityChecker:
         self._plot_deviation_analysis(ax2, all_json_points, xodr_data)
         plt.tight_layout()
         if save_path is None:
-            save_path = self.json_file.parent / \
+            save_path = self.figures_dir / \
                 (self.json_file.stem+"_visualization.png")
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         self._viz_path = str(save_path)
@@ -1645,7 +1634,7 @@ class QualityChecker:
                 'max_detail_rows': max_detail_rows,
                 'max_outline_rows': max_outline_rows}
         html_report = self._generate_html_report(data)
-        report_file = self.json_file.parent / \
+        report_file = self.reports_dir / \
             f"{self.json_file.stem}_quality_report.html"
         with open(report_file, 'w', encoding='utf-8') as f:
             f.write(html_report)
@@ -1656,8 +1645,8 @@ class QualityChecker:
 if __name__ == '__main__':
     starttime = datetime.now()
     checker = QualityChecker(
-        json_file="./data/samples/label3.json",
-        xodr_file="./data/samples/label3.xodr",
+        json_file="./data/inputs/bev_202508032010_00-39.json",
+        xodr_file="./data/inputs/bev_202508032010_00-39.xodr",
         threshold=0.1,     # 曲线一致性（边界点）位置阈值
         outline_tol=0.20   # 轮廓一致性（Chamfer 均值）阈值
     )
