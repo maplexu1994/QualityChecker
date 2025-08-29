@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-JSON to XODR Quality Checker — v1.6
+JSON to XODR Quality Checker — v1.7
 
-变更摘要（相对 v1.5）：
-- 功能：修复无用的shared_id相关，增加结果自动导出至reports/figures, 增加部分代码注释。
+变更摘要（相对 v1.6）：
+- 功能：
+增加_signal_rect_outline_world还原xodr中signal outline，
+更新sign/signal对应可视化
+更新html依据reports/figures路径找图
 """
 
 import json
@@ -321,7 +324,7 @@ class QualityChecker:
         return sum(math.hypot(pts[i+1][0]-pts[i][0], pts[i+1][1]-pts[i][1]) for i in range(len(pts)-1))
 
     @staticmethod
-    def _resample_polyline(pts: List[Tuple[float, float]], step: float) -> List[Tuple[float, float]]:
+    def _resample_polyline(pts: List[Tuple[float, float]], step: float) -> List[Tuple[float, float]]:#把一条“不均匀”的折线，按等弧长重新取点，步长是 step
         if not pts:
             return []
         if len(pts) == 1:
@@ -945,62 +948,161 @@ class QualityChecker:
                 out.append({'xodr_id': oid, 'road_id': rid,
                            'center': cen, 'outline': outline})
         return out
+#v1.7 增加_signal_rect_outline_world还原xodr中signal outline，
+    def _signal_rect_outline_world(self, road_id: str, s_sig: float, t_sig: float,
+                                   length: float = None, width: float = None,
+                                   hOffset: float = 0.0, orientation: str = "+") -> List[Tuple[float, float]]:
+        """
+        当 XODR 没有给 outlines 时，用一个 length×width 的矩形在 (s,t) 处复原大致外形（2D 投影）。
+        - length 沿道路切向 u 方向，width 沿法向 v 方向；
+        - orientation="-" 则朝向反向（+π），再叠加 hOffset；
+        - 忽略 zOffset / pitch / roll（仅2D绘制）。
+        """
+        # 中心点和参考朝向
+        center = self._st_to_world(road_id, float(s_sig), float(t_sig))
+        if center is None:
+            return []
+        x0, y0 = center
+        ref = self._interp_ref_at(road_id, float(s_sig))
+        hdg_ref = ref[2] if ref is not None else 0.0
+        hdg_abs = hdg_ref + (math.pi if str(orientation).strip() == "-" else 0.0) + float(hOffset or 0.0)
+
+        # 尺寸兜底：若 height=0 则常见只给 width/length；都缺就给个小牌子
+        L = float(length) if (length is not None and float(length) > 0) else (
+            float(width) if (width is not None and float(width) > 0) else 0.6)
+        W = float(width) if (width is not None and float(width) > 0) else (
+            float(length) if (length is not None and float(length) > 0) else 0.4)
+        hu, hv = max(0.01, L / 2.0), max(0.01, W / 2.0)
+
+        # 局部矩形四角（u,v）
+        local = [(-hu, -hv), (hu, -hv), (hu, hv), (-hu, hv)]
+        # 变换到世界坐标
+        poly = [self._local_to_global(x0, y0, hdg_abs, u, v) for (u, v) in local]
+        # 闭合
+        poly.append(poly[0])
+        return poly
 
     def _signal_outline_world(self, road_id: str, sig: ET.Element) -> List[Tuple[float, float]]:
+        """
+        优先解析 <outline>/cornerRoad/cornerLocal；
+        若缺失，则基于 s/t/length/width/hOffset/orientation 复原一个矩形轮廓。
+        """
+        # 先尝试已有 outlines
         outlines_parent = sig.find('outlines')
-        outlines = outlines_parent.findall(
-            'outline') if outlines_parent is not None else sig.findall('outline')
-        pts_all = []
-        if not outlines:
-            return pts_all
+        outlines = outlines_parent.findall('outline') if outlines_parent is not None else sig.findall('outline')
+        pts_all: List[Tuple[float, float]] = []
+        if outlines:
+            s_sig = float(sig.get('s', 0.0))
+            t_sig = float(sig.get('t', 0.0))
+            hdg_sig = float(sig.get('hdg', 0.0) or 0.0)
+            ref = self._interp_ref_at(road_id, s_sig)
+            hdg_abs = (ref[2] if ref is not None else 0.0) + hdg_sig
+            center = self._st_to_world(road_id, s_sig, t_sig)
+            for ol in outlines:
+                cr = ol.findall('cornerRoad')
+                cl = ol.findall('cornerLocal')
+                ring = []
+                if cr:
+                    for c in cr:
+                        s = float(c.get('s', s_sig))
+                        t = float(c.get('t', t_sig))
+                        w = self._st_to_world(road_id, s, t)
+                        if w is not None:
+                            ring.append(w)
+                elif cl and center is not None:
+                    x0, y0 = center
+                    for c in cl:
+                        u = float(c.get('u', 0.0))
+                        v = float(c.get('v', 0.0))
+                        ring.append(self._local_to_global(x0, y0, hdg_abs, u, v))
+                if ring:
+                    if len(ring) >= 3 and ring[0] != ring[-1]:
+                        ring.append(ring[0])
+                    pts_all.extend(ring)
+
+            if pts_all:
+                return pts_all
+
+        # —— 没有 outline：用矩形复原 ——
         s_sig = float(sig.get('s', 0.0))
         t_sig = float(sig.get('t', 0.0))
-        hdg_sig = float(sig.get('hdg', 0.0) or 0.0)
-        ref = self._interp_ref_at(road_id, s_sig)
-        hdg_abs = 0.0
-        if ref is not None:
-            _, _, hdg_ref = ref
-            hdg_abs = hdg_ref+hdg_sig
-        center = self._st_to_world(road_id, s_sig, t_sig)
-        for ol in outlines:
-            cr = ol.findall('cornerRoad')
-            cl = ol.findall('cornerLocal')
-            ring = []
-            if cr:
-                for c in cr:
-                    s = float(c.get('s', s_sig))
-                    t = float(c.get('t', t_sig))
-                    w = self._st_to_world(road_id, s, t)
-                    if w is not None:
-                        ring.append(w)
-            elif cl and center is not None:
-                x0, y0 = center
-                for c in cl:
-                    u = float(c.get('u', 0.0))
-                    v = float(c.get('v', 0.0))
-                    ring.append(self._local_to_global(x0, y0, hdg_abs, u, v))
-            pts_all.extend(ring)
-        return pts_all
+        length = sig.get('length')
+        width = sig.get('width')
+        hOff = sig.get('hOffset', 0.0)
+        orient = sig.get('orientation', '+')
+        try:
+            length = float(length) if length is not None else None
+        except Exception:
+            length = None
+        try:
+            width = float(width) if width is not None else None
+        except Exception:
+            width = None
+        try:
+            hOff = float(hOff) if hOff is not None else 0.0
+        except Exception:
+            hOff = 0.0
+
+        return self._signal_rect_outline_world(road_id, s_sig, t_sig,
+                                               length=length, width=width,
+                                               hOffset=hOff, orientation=orient)
 
     def _xodr_signals_world(self) -> List[Dict]:
+        """
+        解析 XODR 信号：
+          - 兼容 <road><signals><signal/> / <signalReference/> 以及 <road><signal/> 直接子节点；
+          - 若有 outline 则直接用；没有则调用 _signal_rect_outline_world 复原矩形轮廓；
+          - 始终返回 center（用于配对）。
+        """
         out = []
         for road in self.xodr_root.findall('road'):
             rid = road.get('id', 'unknown')
-            sigs_parent = road.find('signals')
-            sigs = []
-            if sigs_parent is not None:
-                sigs.extend(sigs_parent.findall('signal'))
-            sigs.extend([n for n in road.findall('signal')])
-            for sg in sigs:
-                sid = sg.get('id')
+
+            sig_elems = []
+            sp = road.find('signals')
+            if sp is not None:
+                sig_elems.extend(sp.findall('signal'))
+                sig_elems.extend(sp.findall('signalReference'))
+            sig_elems.extend(road.findall('signal'))
+            sig_elems.extend(road.findall('signalReference'))
+
+            for sg in sig_elems:
+                tag = sg.tag  # 'signal' 或 'signalReference'
+                sid = sg.get('id') or sg.get('name') or sg.get('reference') or ''
+
                 s = float(sg.get('s', 0.0))
                 t = float(sg.get('t', 0.0))
-                world_center = self._st_to_world(rid, s, t)
-                outline = self._signal_outline_world(rid, sg)
-                cen = self._centroid_xy(outline) if outline else (
-                    world_center if world_center else (0.0, 0.0))
-                out.append({'xodr_id': sid, 'road_id': rid,
-                           'center': cen, 'outline': outline})
+                center = self._st_to_world(rid, s, t)
+                outline = []
+
+                if tag == 'signal':
+                    # 尝试直接解析 outline；若没有则用矩形复原
+                    outline = self._signal_outline_world(rid, sg)
+                else:
+                    # signalReference 没几何，直接矩形复原（可能没有 length/width，函数内部会兜底）
+                    length = sg.get('length')
+                    width = sg.get('width')
+                    hOff = sg.get('hOffset', 0.0)
+                    orient = sg.get('orientation', '+')
+                    try:
+                        length = float(length) if length is not None else None
+                    except Exception:
+                        length = None
+                    try:
+                        width = float(width) if width is not None else None
+                    except Exception:
+                        width = None
+                    try:
+                        hOff = float(hOff) if hOff is not None else 0.0
+                    except Exception:
+                        hOff = 0.0
+
+                    outline = self._signal_rect_outline_world(rid, s, t,
+                                                              length=length, width=width,
+                                                              hOffset=hOff, orientation=orient)
+
+                cen = self._centroid_xy(outline) if outline else (center if center else (0.0, 0.0))
+                out.append({'xodr_id': sid, 'road_id': rid, 'center': cen, 'outline': outline})
         return out
 
     def _match_by_nearest_center(self, js: List[Dict], xs: List[Dict]) -> List[Tuple[Dict, Optional[Dict], float]]:
@@ -1155,10 +1257,12 @@ class QualityChecker:
         print("\n🎨 生成可视化图表…")
         all_json_points = self._get_all_json_points()
         xodr_data = self._sample_xodr_curves_and_lanes()
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
-        self._plot_overall_distribution(ax1, all_json_points, xodr_data)
-        self._plot_deviation_analysis(ax2, all_json_points, xodr_data)
-        plt.tight_layout()
+        fig, (ax_top, ax_bottom) = plt.subplots(
+            2, 1, figsize=(16, 10), sharex=False, sharey=False, constrained_layout=True
+        )
+        # 把下面的 ax1 → ax_top，ax2 → ax_bottom
+        self._plot_overall_distribution(ax_top, all_json_points, xodr_data)
+        self._plot_deviation_analysis(ax_bottom, all_json_points, xodr_data)
         if save_path is None:
             save_path = self.figures_dir / \
                 (self.json_file.stem+"_visualization.png")
@@ -1220,35 +1324,137 @@ class QualityChecker:
         ax.grid(True, alpha=0.3)
 
     def visualize_outline_overlay(self, save_path: str = None) -> str:
+        """
+        绘制两张对比图：
+          左：Objects（JSON 实线 / XODR 虚线）
+          右：Signs/Signals（JSON 实线 / XODR 虚线，JSON 无 outline 时回退 bbox）
+        """
         print("\n🎨 生成对象/标识 Outline 叠加图…")
+
+        # ---- 准备配色（可按需改） ----
+        json_obj_color = "#1f77b4"  # 蓝（JSON objects）
+        xodr_obj_color = "#ff7f0e"  # 橙（XODR objects）
+        json_sig_color = "#2ca02c"  # 绿（JSON signs）
+        xodr_sig_color = "#d62728"  # 红（XODR signals）
+
+        # ---- 数据配对（沿用你的最近中心点匹配）----
         j_objs = self._json_objects()
         x_objs = self._xodr_objects_world()
         pairs_obj = self._match_by_nearest_center(j_objs, x_objs)
-        j_sigs = self._json_signs()
-        x_sigs = self._xodr_signals_world()
+
+        j_sigs = self._json_signs()  # JSON: sign
+        x_sigs = self._xodr_signals_world()  # XODR: signal
         pairs_sig = self._match_by_nearest_center(j_sigs, x_sigs)
-        fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-        ax.set_aspect('equal', 'box')
-        ax.grid(True, alpha=0.3)
-        ax.set_title(
-            'Objects/Signals Outline Overlay (JSON solid, XODR dashed)')
-        for j, x, _ in pairs_obj:
-            if j.get('outline'):
-                xs, ys = zip(*j['outline'])
-                ax.plot(xs, ys, linewidth=1.6, alpha=0.95)
-            if x and x.get('outline'):
-                xs, ys = zip(*x['outline'])
-                ax.plot(xs, ys, linewidth=1.2, alpha=0.95, linestyle='--')
-        for j, x, _ in pairs_sig:
-            if j.get('outline'):
-                xs, ys = zip(*j['outline'])
-                ax.plot(xs, ys, linewidth=1.6, alpha=0.95)
-            if x and x.get('outline'):
-                xs, ys = zip(*x['outline'])
-                ax.plot(xs, ys, linewidth=1.2, alpha=0.95, linestyle='--')
+        #v1.7 更新sign / signal对应可视化
+        # ---- 工具函数 ----
+        def _ensure_closed(pts):
+            """确保多边形闭合；线段/点集也可直接返回"""
+            if not pts:
+                return pts
+            if len(pts) >= 3 and (pts[0][0] != pts[-1][0] or pts[0][1] != pts[-1][1]):
+                return pts + [pts[0]]
+            return pts
+
+        def _json_sign_outline_or_bbox(item):
+            """
+            返回 JSON sign 的 outline（优先）或 bbox（min/max），都以闭合环返回；
+            若都没有返回 []。
+            """
+            ol = item.get("outline")
+            if isinstance(ol, list) and len(ol) >= 2:
+                pts = [(float(p.get("x", 0.0)), float(p.get("y", 0.0))) for p in ol]
+                return _ensure_closed(pts)
+
+            # fallback: bbox
+            if all(k in item for k in ("min_x", "min_y", "max_x", "max_y")):
+                xmin = float(item["min_x"]);
+                ymin = float(item["min_y"])
+                xmax = float(item["max_x"]);
+                ymax = float(item["max_y"])
+                return [(xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax), (xmin, ymin)]
+            return []
+
+        def _pair_iter_to_polylines(pairs, is_sign=False):
+            """
+            将配对迭代器转为 (json_poly, xodr_poly, j_id, x_id) 四元组可迭代。
+            is_sign=True 时，JSON 侧调用 _json_sign_outline_or_bbox 兜底。
+            """
+            for j, x, _ in pairs:
+                # JSON
+                if is_sign:
+                    j_poly = _json_sign_outline_or_bbox(j.get('raw', {}))
+                else:
+                    pts = j.get('outline') or []
+                    j_poly = _ensure_closed([(float(px), float(py)) for (px, py) in pts]) if pts else []
+                # XODR
+                x_poly = []
+                if x and x.get('outline'):
+                    x_poly = _ensure_closed([(float(px), float(py)) for (px, py) in x['outline']])
+
+                yield j_poly, x_poly, j.get('json_id'), (x.get('xodr_id') if x else None)
+
+        def _draw_pairs(ax, pairs, *, json_color, xodr_color, title,
+                        show_center=True, annotate=False, is_sign=False):
+            """
+            在 ax 上绘制一组配对（objects 或 signs）。
+            """
+            # 图例占位（只加一次）
+            json_legend_drawn = False
+            xodr_legend_drawn = False
+
+            for j_poly, x_poly, jid, xid in _pair_iter_to_polylines(pairs, is_sign=is_sign):
+                # JSON
+                if len(j_poly) >= 2:
+                    jx, jy = zip(*j_poly)
+                    ln_json, = ax.plot(jx, jy, color=json_color, linewidth=1.6, alpha=0.95,
+                                       label="JSON" if not json_legend_drawn else None)
+                    json_legend_drawn = True
+                    if show_center and len(j_poly) >= 3:
+                        cx = sum(x for x, _ in j_poly[:-1]) / (
+                            len(j_poly) - 1 if j_poly[0] == j_poly[-1] else len(j_poly))
+                        cy = sum(y for _, y in j_poly[:-1]) / (
+                            len(j_poly) - 1 if j_poly[0] == j_poly[-1] else len(j_poly))
+                        ax.scatter([cx], [cy], s=18, color=json_color, alpha=0.9, marker='o')
+                        if annotate and jid is not None:
+                            ax.text(cx, cy, f"J{jid}", fontsize=8, color=json_color, ha="center", va="bottom",
+                                    alpha=0.9)
+
+                # XODR
+                if len(x_poly) >= 2:
+                    xx, xy = zip(*x_poly)
+                    ln_xodr, = ax.plot(xx, xy, color=xodr_color, linewidth=1.2, alpha=0.95, linestyle='--',
+                                       label="XODR" if not xodr_legend_drawn else None)
+                    xodr_legend_drawn = True
+                    if show_center and len(x_poly) >= 3:
+                        cx = sum(x for x, _ in x_poly[:-1]) / (
+                            len(x_poly) - 1 if x_poly[0] == x_poly[-1] else len(x_poly))
+                        cy = sum(y for _, y in x_poly[:-1]) / (
+                            len(x_poly) - 1 if x_poly[0] == x_poly[-1] else len(x_poly))
+                        ax.scatter([cx], [cy], s=16, color=xodr_color, alpha=0.9, marker='x')
+                        if annotate and xid is not None:
+                            ax.text(cx, cy, f"X{xid}", fontsize=8, color=xodr_color, ha="center", va="top", alpha=0.9)
+
+            ax.set_title(title)
+            ax.set_aspect('equal', 'box')
+            ax.grid(True, alpha=0.3)
+            ax.legend(loc="best", fontsize=9)
+
+        # ---- 作图：两列子图更清晰 ----
+        fig, (ax_top, ax_bottom) = plt.subplots(
+            2, 1, figsize=(16, 10), sharex=False, sharey=False, constrained_layout=True
+        )
+
+        _draw_pairs(ax_top, pairs_obj, json_color=json_obj_color, xodr_color=xodr_obj_color,
+                    title="Objects Overlay (JSON solid / XODR dashed)",
+                    show_center=True, annotate=False, is_sign=False)
+
+        _draw_pairs(ax_bottom, pairs_sig, json_color=json_sig_color, xodr_color=xodr_sig_color,
+                    title="Signs/Signals Overlay (JSON solid / XODR dashed)",
+                    show_center=True, annotate=False, is_sign=True)
+
+        # ---- 保存 ----
         if save_path is None:
-            save_path = self.json_file.parent / \
-                (self.json_file.stem+"_outline_overlay.png")
+            save_path = self.figures_dir / (self.json_file.stem + "_outline_overlay.png")
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         self._viz_outline_path = str(save_path)
         print("✅ Outline overlay saved:", save_path)
@@ -1259,6 +1465,17 @@ class QualityChecker:
         return str(save_path)
 
     # ---------- HTML ----------
+    def _rel_to_html(self, asset_path, html_dir) -> str:
+        """把任意文件路径转成相对 HTML 目录的路径（统一成 POSIX 斜杠，防止 Windows 反斜杠）"""
+        from pathlib import Path
+        import os
+        p = Path(asset_path)
+        html_dir = Path(html_dir)
+        try:
+            rel = os.path.relpath(p, start=html_dir)
+        except Exception:
+            rel = str(p)
+        return Path(rel).as_posix()
     def _generate_html_report(self, data: Dict) -> str:
         json_file = _html.escape(data['json_file'])
         xodr_file = _html.escape(data['xodr_file'])
@@ -1307,8 +1524,25 @@ class QualityChecker:
                 return '—'
             return f"{v:.1%}" if pct else f"{v:.{nd}f}"
 
-        viz_img_html = f"<img src=\"{_html.escape(viz_path)}\" style=\"max-width:100%;border:1px solid #eee;border-radius:8px;\">" if viz_path else ""
-        viz_outline_html = f"<img src=\"{_html.escape(viz_outline)}\" style=\"max-width:100%;border:1px solid #eee;border-radius:8px;\">" if viz_outline else ""
+        #v1.7更新html依据reports/figures路径找图
+        # HTML 就保存在 reports/ 里，所以转相对路径时的起点就是 reports 目录本身
+        html_dir = self.reports_dir
+
+        def _img(abs_path):
+            """把图片绝对路径转相对 HTML 目录，再输出统一样式的 <img> 标签。"""
+            if not abs_path:
+                return ""
+            rel = self._rel_to_html(abs_path, html_dir)  # 复用上面的工具函数
+            return (
+                f'<img src="{_html.escape(rel)}" '
+                f'style="display:block;max-width:100%;border:1px solid #eee;'
+                f'border-radius:8px;margin:10px 0;">'
+            )
+
+        # === 原来的两行，改成用 _img(...) ===
+        viz_img_html = _img(viz_path)  # “分布 & 偏移热力（示意）”等
+        viz_outline_html = _img(viz_outline)  # “对象/标识一致性（轮廓）”等
+
 
         # 完整性表格行
         comp_table_rows = f"""
