@@ -1,0 +1,1030 @@
+<!doctype html>
+    <html lang="zh-CN">
+    <head>
+    <meta charset="utf-8" />
+    <title>JSON→XODR 质检报告</title>
+    <style>
+      html,body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans CJK SC","Microsoft YaHei","PingFang SC",sans-serif;color:#222; }
+      .container { max-width: 1100px; margin: 32px auto; padding: 0 16px; }
+      h1 { font-size: 26px; margin: 0 0 6px; }
+      h2 { font-size: 20px; margin: 28px 0 12px; border-left:4px solid #555; padding-left:8px; }
+      h3 { font-size: 16px; margin: 18px 0 10px; }
+      .meta,.muted { color:#666; font-size: 13px; }
+      .grid3 { display:grid; grid-template-columns: repeat(3,1fr); gap:12px; }
+      .grid2 { display:grid; grid-template-columns: repeat(2,1fr); gap:12px; }
+      .card { border:1px solid #e6e6e6; border-radius:10px; padding:12px 14px; background:#fff; }
+      .kpi { font-size: 22px; font-weight:600; }
+      .ok { color:#138000; } .warn { color:#d97706; } .bad { color:#b91c1c; }
+      table { width:100%; border-collapse: collapse; font-size: 13px; }
+      th,td { border-bottom:1px solid #eee; padding:8px 10px; text-align:left; }
+      th { background:#fafafa; }
+      td.num,th.num { text-align:right; font-variant-numeric: tabular-nums; }
+      .imgwrap { text-align:center; margin: 14px 0 6px; }
+      .warning-list { margin:6px 0 0 16px; }
+      .legend { color:#555; font-size: 13px; }
+      .footer { color:#777; font-size: 12px; margin-top: 28px; }
+      .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid transparent; }
+      .badge.tag { background:#eef; color:#225; border-color:#dde; }
+      /* NEW: 告警明细折叠样式 */
+      .alarm-toggle { cursor: pointer; color: #0066cc; text-decoration: underline; }
+      .alarm-detail-row { display: none; }
+      .alarm-img { max-width: 640px; border: 1px solid #ddd; border-radius: 6px; }
+    </style>
+    <script>
+    function toggleAlarmRow(id) {
+      var row = document.getElementById(id);
+      if (!row) return;
+      row.style.display = (row.style.display === 'none' || row.style.display === '') ? 'table-row' : 'none';
+    }
+    </script>
+    </head>
+    <body>
+    <div class="container">
+
+      <h1>JSON → XODR 质检报告</h1>
+      <div class="meta">生成时间：2025-09-01 17:31:54</div>
+      <div class="meta">JSON 文件：data\inputs\bev_202507130700_42-52.json</div>
+      <div class="meta">XODR 文件：data\inputs\bev_202507130700_42-52.xodr</div>
+
+      <h2>摘要</h2>
+      <div class="grid3">
+        <div class="card">
+          <div class="muted">完整性得分</div>
+          <div class="kpi">100.0%</div>
+          <div class="legend">依据：车道/边界/物体/标识数量对比</div>
+        </div>
+        <div class="card">
+          <div class="muted">一致性得分（曲线，v1.4）</div>
+          <div class="kpi">0.0%</div>
+          <div class="legend">按车道分组 + 跨路段拼接 + 边界指派；阈值 0.100 m</div>
+        </div>
+        <div class="card">
+          <div class="muted">告警数量</div>
+          <div class="kpi bad">34</div>
+          <div class="legend">超阈值点：34/60</div>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:12px;">
+        <div class="card">
+          <div class="muted">对象一致性（轮廓）</div>
+          <div class="kpi">100.0%</div>
+          <div class="legend">均值: 0.000 m；最大: 0.000 m；通过/警告/失败/缺失: 2/0/0/0</div>
+        </div>
+        <div class="card">
+          <div class="muted">标识一致性（轮廓）</div>
+          <div class="kpi">85.2%</div>
+          <div class="legend">均值: 0.059 m；最大: 0.126 m；通过/警告/失败/缺失: 1/0/0/0</div>
+        </div>
+      </div>
+
+      <h2>完整性检查</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>要素</th><th class="num">JSON 数量</th><th class="num">XODR 数量</th><th class="num">子分数</th></tr>
+          </thead>
+          <tbody>
+            
+          <tr><td>车道（driving）</td><td class="num">4</td><td class="num">4</td><td class="num">1.00</td></tr>
+          <tr><td>边界（唯一ID vs 拓扑边界）</td><td class="num">5</td><td class="num">5</td><td class="num">1.00</td></tr>
+          <tr><td>物体（objects）</td><td class="num">2</td><td class="num">2</td><td class="num">1.00</td></tr>
+          <tr><td>标识（sign → signal）</td><td class="num">1</td><td class="num">1</td><td class="num">1.00</td></tr>
+        
+          </tbody>
+        </table>
+        <div class="muted">说明：XODR 数量可能大于 JSON（例如拓扑边界拆分、道路拼接等）；子分数按 min(XODR/JSON, 1.0) 计算。</div>
+      </div>
+
+      <h2>一致性检查（曲线） <span class="badge tag">v1.4 分组启用</span></h2>
+      <div class="grid3">
+        <div class="card">
+          <div class="muted">平均偏移</div><div class="kpi">0.127 m</div>
+          <div class="legend">匹配车道：4；映射边界：5</div>
+        </div>
+        <div class="card">
+          <div class="muted">最大 / 最小偏移</div><div class="kpi">0.451 / 0.000 m</div>
+        </div>
+        <div class="card">
+          <div class="muted">参与点数</div><div class="kpi">60</div>
+          <div class="legend">仅包含 JSON 边界点</div>
+        </div>
+      </div>
+      <div class="card"><div class="muted">分布 & 偏移热力（示意）</div><div class="imgwrap"><img src="../figures/bev_202507130700_42-52_visualization.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div></div>
+
+      <h2>对象/标识一致性（轮廓）</h2>
+      <div class="card">
+        <div class="imgwrap"><img src="../figures/bev_202507130700_42-52_outline_overlay.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+        <div class="muted">判定规则：阈值 <b>outline_tol = 0.200 m</b>；均值 ≤ tol → <b>通过</b>；≤ 2·tol → <b>警告</b>；其余 → <b>失败</b>；任一侧缺失 → <b>缺失</b>。</div>
+      </div>
+
+      <!-- NEW: 按 bound 指派（用于打分）的明细表 + 行下折叠局部图 -->
+      <h2>边界匹配明细（按 bound 指派，用于打分，前 200 条）</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">序号</th>
+              <th>类型</th>
+              <th>Bound ID</th>
+              <th>JSON 坐标 (x, y)</th>
+              <th>最近 XODR 坐标 (x, y)（示意）</th>
+              <th class="num">偏移 (m)</th>
+              <th>判定</th>
+              <th>局部分布</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+              <tr>
+                <td class="num">1</td>
+                <td>bound</td>
+                <td>5</td>
+                <td>(108.099, -9.218)</td>
+                <td>(108.101, -8.767)</td>
+                <td class="num">0.451</td>
+                <td>失败</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_1')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_1" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0001.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">2</td>
+                <td>bound</td>
+                <td>5</td>
+                <td>(125.455, -9.213)</td>
+                <td>(125.452, -8.811)</td>
+                <td class="num">0.402</td>
+                <td>失败</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_2')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_2" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0002.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">3</td>
+                <td>bound</td>
+                <td>5</td>
+                <td>(142.302, -9.231)</td>
+                <td>(142.303, -8.868)</td>
+                <td class="num">0.363</td>
+                <td>失败</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_3')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_3" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0003.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">4</td>
+                <td>bound</td>
+                <td>5</td>
+                <td>(92.671, -9.053)</td>
+                <td>(92.650, -8.741)</td>
+                <td class="num">0.313</td>
+                <td>失败</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_4')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_4" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0004.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">5</td>
+                <td>bound</td>
+                <td>5</td>
+                <td>(75.195, -9.014)</td>
+                <td>(75.199, -8.726)</td>
+                <td class="num">0.288</td>
+                <td>失败</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_5')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_5" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0005.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">6</td>
+                <td>bound</td>
+                <td>5</td>
+                <td>(160.859, -9.231)</td>
+                <td>(160.854, -8.948)</td>
+                <td class="num">0.283</td>
+                <td>失败</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_6')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_6" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0006.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">7</td>
+                <td>bound</td>
+                <td>5</td>
+                <td>(47.273, -9.014)</td>
+                <td>(47.248, -8.734)</td>
+                <td class="num">0.281</td>
+                <td>失败</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_7')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_7" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0007.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">8</td>
+                <td>bound</td>
+                <td>5</td>
+                <td>(64.243, -8.975)</td>
+                <td>(64.248, -8.724)</td>
+                <td class="num">0.251</td>
+                <td>失败</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_8')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_8" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0008.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">9</td>
+                <td>bound</td>
+                <td>5</td>
+                <td>(32.205, -8.975)</td>
+                <td>(32.197, -8.755)</td>
+                <td class="num">0.221</td>
+                <td>失败</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_9')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_9" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0009.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">10</td>
+                <td>bound</td>
+                <td>2</td>
+                <td>(141.859, 1.216)</td>
+                <td>(141.846, 1.436)</td>
+                <td class="num">0.220</td>
+                <td>失败</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_10')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_10" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0010.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">11</td>
+                <td>bound</td>
+                <td>3</td>
+                <td>(92.247, -1.769)</td>
+                <td>(92.247, -1.559)</td>
+                <td class="num">0.210</td>
+                <td>失败</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_11')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_11" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0011.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">12</td>
+                <td>bound</td>
+                <td>2</td>
+                <td>(92.307, 1.276)</td>
+                <td>(92.317, 1.483)</td>
+                <td class="num">0.208</td>
+                <td>失败</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_12')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_12" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0012.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">13</td>
+                <td>bound</td>
+                <td>2</td>
+                <td>(107.710, 1.276)</td>
+                <td>(107.726, 1.482)</td>
+                <td class="num">0.206</td>
+                <td>失败</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_13')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_13" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0013.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">14</td>
+                <td>bound</td>
+                <td>2</td>
+                <td>(75.053, 1.276)</td>
+                <td>(75.057, 1.471)</td>
+                <td class="num">0.195</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_14')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_14" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0014.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">15</td>
+                <td>bound</td>
+                <td>2</td>
+                <td>(125.202, 1.276)</td>
+                <td>(125.186, 1.466)</td>
+                <td class="num">0.190</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_15')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_15" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0015.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">16</td>
+                <td>bound</td>
+                <td>1</td>
+                <td>(75.014, 4.246)</td>
+                <td>(75.023, 4.429)</td>
+                <td class="num">0.183</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_16')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_16" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0016.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">17</td>
+                <td>bound</td>
+                <td>4</td>
+                <td>(142.098, -4.993)</td>
+                <td>(142.090, -4.818)</td>
+                <td class="num">0.174</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_17')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_17" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0017.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">18</td>
+                <td>bound</td>
+                <td>4</td>
+                <td>(108.008, -4.933)</td>
+                <td>(108.030, -4.761)</td>
+                <td class="num">0.174</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_18')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_18" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0018.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">19</td>
+                <td>bound</td>
+                <td>3</td>
+                <td>(125.441, -1.769)</td>
+                <td>(125.461, -1.598)</td>
+                <td class="num">0.171</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_19')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_19" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0019.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">20</td>
+                <td>bound</td>
+                <td>1</td>
+                <td>(92.435, 4.246)</td>
+                <td>(92.436, 4.411)</td>
+                <td class="num">0.165</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_20')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_20" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0020.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">21</td>
+                <td>bound</td>
+                <td>4</td>
+                <td>(64.128, -4.933)</td>
+                <td>(64.118, -4.773)</td>
+                <td class="num">0.160</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_21')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_21" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0021.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">22</td>
+                <td>bound</td>
+                <td>4</td>
+                <td>(125.262, -4.933)</td>
+                <td>(125.285, -4.782)</td>
+                <td class="num">0.152</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_22')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_22" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0022.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">23</td>
+                <td>bound</td>
+                <td>3</td>
+                <td>(74.993, -1.709)</td>
+                <td>(74.989, -1.561)</td>
+                <td class="num">0.149</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_23')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_23" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0023.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">24</td>
+                <td>bound</td>
+                <td>3</td>
+                <td>(64.068, -1.709)</td>
+                <td>(64.085, -1.569)</td>
+                <td class="num">0.141</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_24')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_24" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0024.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">25</td>
+                <td>bound</td>
+                <td>3</td>
+                <td>(107.829, -1.709)</td>
+                <td>(107.853, -1.571)</td>
+                <td class="num">0.141</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_25')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_25" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0025.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">26</td>
+                <td>bound</td>
+                <td>1</td>
+                <td>(107.540, 4.246)</td>
+                <td>(107.547, 4.383)</td>
+                <td class="num">0.138</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_26')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_26" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0026.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">27</td>
+                <td>bound</td>
+                <td>1</td>
+                <td>(64.172, 4.298)</td>
+                <td>(64.165, 4.432)</td>
+                <td class="num">0.134</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_27')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_27" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0027.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">28</td>
+                <td>bound</td>
+                <td>3</td>
+                <td>(142.217, -1.769)</td>
+                <td>(142.218, -1.640)</td>
+                <td class="num">0.129</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_28')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_28" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0028.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">29</td>
+                <td>bound</td>
+                <td>1</td>
+                <td>(47.014, 4.298)</td>
+                <td>(47.003, 4.425)</td>
+                <td class="num">0.127</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_29')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_29" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0029.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">30</td>
+                <td>bound</td>
+                <td>4</td>
+                <td>(92.546, -4.873)</td>
+                <td>(92.526, -4.754)</td>
+                <td class="num">0.121</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_30')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_30" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0030.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">31</td>
+                <td>bound</td>
+                <td>2</td>
+                <td>(64.187, 1.336)</td>
+                <td>(64.200, 1.455)</td>
+                <td class="num">0.120</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_31')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_31" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0031.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">32</td>
+                <td>bound</td>
+                <td>4</td>
+                <td>(75.053, -4.873)</td>
+                <td>(75.071, -4.761)</td>
+                <td class="num">0.114</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_32')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_32" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0032.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">33</td>
+                <td>bound</td>
+                <td>1</td>
+                <td>(31.804, 4.298)</td>
+                <td>(31.792, 4.406)</td>
+                <td class="num">0.108</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_33')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_33" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0033.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">34</td>
+                <td>bound</td>
+                <td>2</td>
+                <td>(179.590, 1.216)</td>
+                <td>(179.569, 1.316)</td>
+                <td class="num">0.102</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_34')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_34" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0034.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+                  <tr>
+                    <td class="num">35</td>
+                    <td>bound</td>
+                    <td>1</td>
+                    <td>(188.856, 4.035)</td>
+                    <td>(188.856, 4.035)</td>
+                    <td class="num">0.000</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">36</td>
+                    <td>bound</td>
+                    <td>1</td>
+                    <td>(7.225, 4.351)</td>
+                    <td>(7.225, 4.351)</td>
+                    <td class="num">0.000</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">37</td>
+                    <td>bound</td>
+                    <td>1</td>
+                    <td>(142.014, 4.246)</td>
+                    <td>(142.022, 4.277)</td>
+                    <td class="num">0.032</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">38</td>
+                    <td>bound</td>
+                    <td>1</td>
+                    <td>(179.646, 4.141)</td>
+                    <td>(179.649, 4.091)</td>
+                    <td class="num">0.049</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">39</td>
+                    <td>bound</td>
+                    <td>1</td>
+                    <td>(160.435, 4.246)</td>
+                    <td>(160.435, 4.195)</td>
+                    <td class="num">0.051</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">40</td>
+                    <td>bound</td>
+                    <td>1</td>
+                    <td>(125.382, 4.246)</td>
+                    <td>(125.360, 4.336)</td>
+                    <td class="num">0.093</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">41</td>
+                    <td>bound</td>
+                    <td>2</td>
+                    <td>(7.218, 1.274)</td>
+                    <td>(7.218, 1.274)</td>
+                    <td class="num">0.000</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">42</td>
+                    <td>bound</td>
+                    <td>2</td>
+                    <td>(188.825, 1.276)</td>
+                    <td>(188.824, 1.276)</td>
+                    <td class="num">0.000</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">43</td>
+                    <td>bound</td>
+                    <td>2</td>
+                    <td>(31.949, 1.336)</td>
+                    <td>(31.932, 1.373)</td>
+                    <td class="num">0.040</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">44</td>
+                    <td>bound</td>
+                    <td>2</td>
+                    <td>(160.426, 1.336)</td>
+                    <td>(160.407, 1.386)</td>
+                    <td class="num">0.054</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">45</td>
+                    <td>bound</td>
+                    <td>2</td>
+                    <td>(47.053, 1.336)</td>
+                    <td>(47.040, 1.418)</td>
+                    <td class="num">0.083</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">46</td>
+                    <td>bound</td>
+                    <td>3</td>
+                    <td>(188.789, -1.829)</td>
+                    <td>(188.789, -1.829)</td>
+                    <td class="num">0.000</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">47</td>
+                    <td>bound</td>
+                    <td>3</td>
+                    <td>(7.212, -1.713)</td>
+                    <td>(7.212, -1.713)</td>
+                    <td class="num">0.000</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">48</td>
+                    <td>bound</td>
+                    <td>3</td>
+                    <td>(179.471, -1.769)</td>
+                    <td>(179.485, -1.782)</td>
+                    <td class="num">0.020</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">49</td>
+                    <td>bound</td>
+                    <td>3</td>
+                    <td>(32.008, -1.590)</td>
+                    <td>(32.022, -1.630)</td>
+                    <td class="num">0.043</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">50</td>
+                    <td>bound</td>
+                    <td>3</td>
+                    <td>(47.292, -1.649)</td>
+                    <td>(47.278, -1.595)</td>
+                    <td class="num">0.056</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">51</td>
+                    <td>bound</td>
+                    <td>3</td>
+                    <td>(160.486, -1.769)</td>
+                    <td>(160.476, -1.701)</td>
+                    <td class="num">0.069</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">52</td>
+                    <td>bound</td>
+                    <td>4</td>
+                    <td>(7.205, -4.935)</td>
+                    <td>(7.205, -4.935)</td>
+                    <td class="num">0.000</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">53</td>
+                    <td>bound</td>
+                    <td>4</td>
+                    <td>(188.753, -4.993)</td>
+                    <td>(188.753, -4.993)</td>
+                    <td class="num">0.000</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">54</td>
+                    <td>bound</td>
+                    <td>4</td>
+                    <td>(160.665, -4.873)</td>
+                    <td>(160.645, -4.875)</td>
+                    <td class="num">0.020</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">55</td>
+                    <td>bound</td>
+                    <td>4</td>
+                    <td>(32.128, -4.873)</td>
+                    <td>(32.110, -4.844)</td>
+                    <td class="num">0.034</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">56</td>
+                    <td>bound</td>
+                    <td>4</td>
+                    <td>(179.769, -4.993)</td>
+                    <td>(179.750, -4.951)</td>
+                    <td class="num">0.046</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">57</td>
+                    <td>bound</td>
+                    <td>4</td>
+                    <td>(47.292, -4.873)</td>
+                    <td>(47.314, -4.804)</td>
+                    <td class="num">0.073</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">58</td>
+                    <td>bound</td>
+                    <td>5</td>
+                    <td>(7.196, -8.815)</td>
+                    <td>(7.196, -8.815)</td>
+                    <td class="num">0.000</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">59</td>
+                    <td>bound</td>
+                    <td>5</td>
+                    <td>(188.706, -9.100)</td>
+                    <td>(188.706, -9.100)</td>
+                    <td class="num">0.000</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">60</td>
+                    <td>bound</td>
+                    <td>5</td>
+                    <td>(179.941, -9.100)</td>
+                    <td>(179.955, -9.048)</td>
+                    <td class="num">0.054</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+          </tbody>
+        </table>
+        <div class="muted">注：偏移 (m) 为按 bound 指派的距离；若某点未能指派显示 “—”。最近 XODR 坐标仅用于可视化示意，不参与打分。</div>
+      </div>
+
+      <h2>对象轮廓匹配明细（前 200 条）</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">序号</th>
+              <th>JSON 对象ID</th>
+              <th>XODR 对象ID</th>
+              <th class="num">JSON 点数</th>
+              <th class="num">XODR 点数</th>
+              <th class="num">Chamfer 均值 (m)</th>
+              <th class="num">最大 (m)</th>
+              <th>判定</th>
+              <th class="num">得分</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class='num'>0</td><td>polyline_7</td><td>1</td><td class='num'>18</td><td class='num'>18</td><td class='num'>0.000</td><td class='num'>0.000</td><td>通过</td><td class='num'>100%</td></tr><tr><td class='num'>1</td><td>polyline_8</td><td>2</td><td class='num'>18</td><td class='num'>18</td><td class='num'>0.000</td><td class='num'>0.000</td><td>通过</td><td class='num'>100%</td></tr>
+          </tbody>
+        </table>
+        <div class="muted">注：对象轮廓匹配基于 Chamfer 距离；判定与阈值规则同上。</div>
+      </div>
+
+      <h2>标识轮廓匹配明细（前 200 条）</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">序号</th>
+              <th>JSON 标识ID</th>
+              <th>XODR 标识ID</th>
+              <th class="num">JSON 点数</th>
+              <th class="num">XODR 点数</th>
+              <th class="num">Chamfer 均值 (m)</th>
+              <th class="num">最大 (m)</th>
+              <th>判定</th>
+              <th class="num">得分</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class='num'>0</td><td>9</td><td>1</td><td class='num'>4</td><td class='num'>5</td><td class='num'>0.059</td><td class='num'>0.126</td><td>通过</td><td class='num'>85%</td></tr>
+          </tbody>
+        </table>
+        <div class="muted">注：标识轮廓匹配基于 Chamfer 距离；判定与阈值规则同上。</div>
+      </div>
+
+      <h2>告警列表</h2>
+      <div class="card"><ul class='warning-list'><li>⚠️ 边界点偏移超阈值: (31.804, 4.298) → 0.108m</li><li>⚠️ 边界点偏移超阈值: (47.014, 4.298) → 0.127m</li><li>⚠️ 边界点偏移超阈值: (64.172, 4.298) → 0.134m</li><li>⚠️ 边界点偏移超阈值: (75.014, 4.246) → 0.183m</li><li>⚠️ 边界点偏移超阈值: (92.435, 4.246) → 0.165m</li><li>⚠️ 边界点偏移超阈值: (107.540, 4.246) → 0.138m</li><li>⚠️ 边界点偏移超阈值: (64.187, 1.336) → 0.120m</li><li>⚠️ 边界点偏移超阈值: (75.053, 1.276) → 0.195m</li><li>⚠️ 边界点偏移超阈值: (92.307, 1.276) → 0.208m</li><li>⚠️ 边界点偏移超阈值: (107.710, 1.276) → 0.206m</li><li>⚠️ 边界点偏移超阈值: (125.202, 1.276) → 0.190m</li><li>⚠️ 边界点偏移超阈值: (141.859, 1.216) → 0.220m</li><li>⚠️ 边界点偏移超阈值: (179.590, 1.216) → 0.102m</li><li>⚠️ 边界点偏移超阈值: (64.068, -1.709) → 0.141m</li><li>⚠️ 边界点偏移超阈值: (74.993, -1.709) → 0.149m</li><li>⚠️ 边界点偏移超阈值: (92.247, -1.769) → 0.210m</li><li>⚠️ 边界点偏移超阈值: (107.829, -1.709) → 0.141m</li><li>⚠️ 边界点偏移超阈值: (125.441, -1.769) → 0.171m</li><li>⚠️ 边界点偏移超阈值: (142.217, -1.769) → 0.129m</li><li>⚠️ 边界点偏移超阈值: (64.128, -4.933) → 0.160m</li><li>⚠️ 边界点偏移超阈值: (75.053, -4.873) → 0.114m</li><li>⚠️ 边界点偏移超阈值: (92.546, -4.873) → 0.121m</li><li>⚠️ 边界点偏移超阈值: (108.008, -4.933) → 0.174m</li><li>⚠️ 边界点偏移超阈值: (125.262, -4.933) → 0.152m</li><li>⚠️ 边界点偏移超阈值: (142.098, -4.993) → 0.174m</li><li>⚠️ 边界点偏移超阈值: (32.205, -8.975) → 0.221m</li><li>⚠️ 边界点偏移超阈值: (47.273, -9.014) → 0.281m</li><li>⚠️ 边界点偏移超阈值: (64.243, -8.975) → 0.251m</li><li>⚠️ 边界点偏移超阈值: (75.195, -9.014) → 0.288m</li><li>⚠️ 边界点偏移超阈值: (92.671, -9.053) → 0.313m</li><li>⚠️ 边界点偏移超阈值: (108.099, -9.218) → 0.451m</li><li>⚠️ 边界点偏移超阈值: (125.455, -9.213) → 0.402m</li><li>⚠️ 边界点偏移超阈值: (142.302, -9.231) → 0.363m</li><li>⚠️ 边界点偏移超阈值: (160.859, -9.231) → 0.283m</li></ul></div>
+
+      <div class="footer">
+        曲线一致性阈值：0.100 m；对象/标识轮廓阈值：0.200 m。<br/>
+        本报告采用 v1.4 的“车道中心多候选→跨路段拼接→2×2 指派”，无法指派时回退到全局最近邻用于统计与明细展示。
+      </div>
+
+    </div>
+    </body>
+    </html>

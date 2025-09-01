@@ -1702,7 +1702,8 @@ class QualityChecker:
 
         # ====== v1.9 NEW: 告警优先 + 通过点分组/折叠 ======
         figures_dir = getattr(self, "figures_dir", Path("figures"))
-        zoom_dir = Path(figures_dir) / "alarms"
+        # 以 JSON 文件名（不含扩展名）作为子目录，避免多份报告的图片互相覆盖
+        zoom_dir = Path(figures_dir) / "alarms" / self.json_file.stem
         zoom_dir.mkdir(parents=True, exist_ok=True)
 
         boundaries_map = getattr(self, "boundaries_map", None)  # 可无：{bound_id: [(x,y), ...]}
@@ -2237,8 +2238,8 @@ class QualityChecker:
 if __name__ == '__main__':
     starttime = datetime.now()
     checker = QualityChecker(
-        json_file="./data/inputs/bev_202508032010_00-39.json",
-        xodr_file="./data/inputs/bev_202508032010_00-39.xodr",
+        json_file="./data/inputs/label3.json",
+        xodr_file="./data/inputs/label3.xodr",
         threshold=0.1,     # 曲线一致性（边界点）位置阈值
         outline_tol=0.20   # 轮廓一致性（Chamfer 均值）阈值
     )
