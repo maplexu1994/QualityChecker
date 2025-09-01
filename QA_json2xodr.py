@@ -744,8 +744,27 @@ class QualityChecker:
         self._build_v14_bound_mapping()
         use_v14 = len(self._v14_bound2xodr) > 0
 
-        # 预备全局最近邻点集（仅在需要时）
-        xodr_all_points = None
+        # 预备全局最近邻点集（仅在需要时）-v1.8更新
+        # ========= v1.8NEW: 邻域配置 =========
+        NEI_RADIUS = 4.0  # 邻域半径（米）建议 3~6 之间看密度
+        JSON_NEI_CAP = 120  # JSON 邻域最大保留点数
+        XODR_NEI_CAP = 180  # XODR 邻域最大保留点数
+
+        # ========= NEW: 为 JSON 边界点 & XODR 全部点 建 KDTree =========
+        import numpy as _np
+        from scipy.spatial import cKDTree as _KD
+
+        # JSON（只取 bound 点作为“JSON局部分布”）
+        j_coords = _np.array([(p['x'], p['y']) for p in bound_points], dtype=float) if bound_points else _np.empty(
+            (0, 2))
+        j_tree = _KD(j_coords) if len(j_coords) else None
+
+        # XODR（参考线 + 车道边界 → 作为“XODR局部分布”）
+        xodr = self._sample_xodr_curves_and_lanes()
+        xodr_all_points = xodr.get('reference_lines', []) + xodr.get('lane_boundaries', [])
+        x_coords = _np.array(xodr_all_points, dtype=float) if xodr_all_points else _np.empty((0, 2))
+        x_tree = _KD(x_coords) if len(x_coords) else None
+        # ========= /v1.8 NEW =========
 
         # 明细：每个点的记录（用于 HTML 渲染）
         self._eval_points_v14 = []
@@ -765,12 +784,20 @@ class QualityChecker:
             bid = int(jp.get('bound_id'))
             jx, jy = jp['x'], jp['y']
 
-            # 1) 指派曲线距离（若存在）
+            # 1) 指派曲线距离（若存在）—— 同时记录最近的指派点坐标-v1.8修改
             assigned_poly = self._v14_bound2xodr.get(bid)
             d_assign = None
+            assign_pt = None
             if assigned_poly:
-                d_assign = min(math.hypot(jx - xp, jy - yp)
-                               for (xp, yp) in assigned_poly)
+                md = float('inf')
+                best = None
+                for (xp, yp) in assigned_poly:
+                    d = math.hypot(jx - xp, jy - yp)
+                    if d < md:
+                        md = d
+                        best = (xp, yp)
+                d_assign = md
+                assign_pt = best
 
             # 2) 全局最近邻（求距离 + 最近邻点坐标，仅用于展示/回退）
             if xodr_all_points is None:
@@ -800,15 +827,43 @@ class QualityChecker:
                       else "警告" if d_use <= 2 * self.threshold
                       else "失败")
 
-            # 记录明细（type 固定为 bound；偏移列显示 d_assign，没有则显示 —）
+            # ========= NEW: 查询局部邻域 =========
+            json_neighbors = None
+            xodr_neighbors = None
+
+            if j_tree is not None:
+                idxs = j_tree.query_ball_point([jx, jy], r=NEI_RADIUS)  # 包含自己
+                # 去掉自身下标 i，避免把告警点本体混入邻域
+                if i in idxs:
+                    idxs = [k for k in idxs if k != i]
+                # 限制数量（可随机抽样或均匀抽样，这里做均匀抽样）
+                if len(idxs) > JSON_NEI_CAP:
+                    sel = _np.linspace(0, len(idxs) - 1, JSON_NEI_CAP).astype(int)
+                    idxs = [idxs[s] for s in sel]
+                json_neighbors = [(float(j_coords[k, 0]), float(j_coords[k, 1])) for k in idxs]
+
+            if x_tree is not None:
+                idxs = x_tree.query_ball_point([jx, jy], r=NEI_RADIUS)
+                if len(idxs) > XODR_NEI_CAP:
+                    sel = _np.linspace(0, len(idxs) - 1, XODR_NEI_CAP).astype(int)
+                    idxs = [idxs[s] for s in sel]
+                xodr_neighbors = [(float(x_coords[k, 0]), float(x_coords[k, 1])) for k in idxs]
+            # ========= /NEW =========
+
+            # 记录明细（type 固定为 bound；偏移列显示 d_assign，没有则显示 —）-v1.8：把 assign_point 一并写进去
             self._eval_points_v14.append({
                 "type": "bound",
                 "bound_id": bid,
-                "x": jx, "y": jy,
-                "nn_point": nn_pt,  # 最近 XODR 坐标（示意）
+                "x": float(jx), "y": float(jy),
+                "nn_point": (tuple(map(float, nn_pt)) if nn_pt else None),
                 "d_assign": (None if d_assign is None else float(d_assign)),
-                "d_use": float(d_use),  # 用于排序/统计
-                "status": status,  # 通过/警告/失败（与告警一致）
+                "assign_point": (tuple(map(float, assign_pt)) if assign_pt else None),
+                "d_use": float(d_use),
+                "status": status,
+                # ========= NEW: 邻域分布 =========
+                "json_neighbors": json_neighbors,  # [(x,y), ...] or None
+                "xodr_neighbors": xodr_neighbors,  # [(x,y), ...] or None
+                # ========= /NEW =========
             })
 
             if (i + 1) % 200 == 0 or i == len(bound_points) - 1:
@@ -1276,30 +1331,58 @@ class QualityChecker:
             pass
         return str(save_path)
 
-    def _plot_overall_distribution(self, ax, json_points, xodr_data):
+#v1.8：优化车道边界及参考线可视化
+    def _plot_overall_distribution(self, ax, json_points, xodr_data, show_lane_centers: bool = False):
+        # 标记：每类只标一次，避免重复图例项
+        ref_labeled = False
+        edge_labeled = False
+        center_labeled = False
+        json_labeled = False
+
+        # 1) XODR 参考线
         for poly in xodr_data.get('reference_polylines', []):
             if len(poly) >= 2:
                 xs, ys = zip(*poly)
-                ax.plot(xs, ys, color='0.4', linewidth=1.5, alpha=0.7)
+                ax.plot(xs, ys,
+                        color='pink', linewidth=3, alpha=0.7,
+                        label=('XODR reference' if not ref_labeled else '_nolegend_'))
+                ref_labeled = True
+
+        # 2) XODR 车道边界（inner/outer）
         for ed in xodr_data.get('lane_edge_polylines', []):
             pts = ed['points']
             if len(pts) >= 2:
                 xs, ys = zip(*pts)
-                ax.plot(xs, ys, color='0.75', linewidth=0.8,
-                        alpha=0.6, linestyle='--')
-        for lane in xodr_data.get('lane_center_polylines', xodr_data.get('lane_polylines', [])):
-            pts = lane['points']
-            if len(pts) >= 2:
-                xs, ys = zip(*pts)
-                ax.plot(xs, ys, linewidth=1.5, alpha=0.95)
-        bpts = [p for p in json_points if p['source'] == 'bound']
+                ax.plot(xs, ys,
+                        color='0.75', linewidth=2, alpha=0.95,
+                        label=('XODR lane edge' if not edge_labeled else '_nolegend_'))
+                edge_labeled = True
+
+        # 3) XODR 车道中心线（可选，默认不显示）
+        if show_lane_centers:
+            for lane in xodr_data.get('lane_center_polylines', []):
+                pts = lane['points']
+                if len(pts) >= 2:
+                    xs, ys = zip(*pts)
+                    ax.plot(xs, ys,
+                            linewidth=1.5, alpha=0.95, linestyle='--',
+                            label=('XODR lane center' if not center_labeled else '_nolegend_'))
+                    center_labeled = True
+
+        # 4) JSON 边界点
+        bpts = [p for p in json_points if p.get('source') == 'bound']
         if bpts:
             bx = [p['x'] for p in bpts]
             by = [p['y'] for p in bpts]
-            ax.scatter(bx, by, s=30, alpha=0.85)
+            ax.scatter(bx, by, s=30, alpha=0.85,
+                       label=('JSON bounds' if not json_labeled else '_nolegend_'))
+            json_labeled = True
+
+        # 5) 外观 & 图例
         ax.set_title('JSON vs XODR Distribution')
         ax.set_aspect('equal', 'box')
         ax.grid(True, alpha=0.3)
+        ax.legend(loc='best', frameon=True, framealpha=0.9)
 
     def _plot_deviation_analysis(self, ax, json_points: List[Dict], xodr_data: Dict):
         # 为了可视化易读，这里仍用“全局最近邻”的偏移上色（不影响实际得分）
@@ -1465,6 +1548,72 @@ class QualityChecker:
             pass
         return str(save_path)
 
+
+#v1.8：增加告警点可视化放大
+    def _plot_alarm_zoom(
+            self,
+            json_xy,  # (x, y) —— JSON 告警点
+            xodr_xy,  # (x, y) —— XODR 最近/示意点
+            save_path: Path,
+            bound_polyline=None,  # 可选: XODR 对应边界折线 [(x,y), ...]
+            json_neighbors=None,  # 可选: 告警点附近 JSON 采样点 [(x,y), ...]
+            xodr_neighbors=None,  # 可选: 告警点附近 XODR 采样点 [(x,y), ...]
+            pad: float = 3.0  # 视野边距，单位 m
+    ):
+        """
+        在告警位置生成一个局部放大图：
+        - 叠加 JSON / XODR 的局部点云或折线（若提供）；
+        - 高亮两关键点并标注偏移长度。
+        """
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+
+        jx, jy = json_xy
+        rx, ry = xodr_xy
+
+        xmin = min(jx, rx) - pad
+        xmax = max(jx, rx) + pad
+        ymin = min(jy, ry) - pad
+        ymax = max(jy, ry) + pad
+
+        fig, ax = plt.subplots(figsize=(4.2, 4.2), dpi=150)
+
+        if xodr_neighbors:
+            xs = [p[0] for p in xodr_neighbors];
+            ys = [p[1] for p in xodr_neighbors]
+            ax.scatter(xs, ys, s=10, label="XODR (local)", alpha=0.85)
+        if json_neighbors:
+            xs = [p[0] for p in json_neighbors];
+            ys = [p[1] for p in json_neighbors]
+            ax.scatter(xs, ys, s=12, marker="s", label="JSON (local)", alpha=0.85)
+        if bound_polyline and len(bound_polyline) >= 2:
+            bx = [p[0] for p in bound_polyline];
+            by = [p[1] for p in bound_polyline]
+            ax.plot(bx, by, linewidth=1.2, label="XODR boundary", alpha=0.9)
+
+        # 两关键点与偏移连线
+        ax.scatter([rx], [ry], s=36, marker="o", label="XODR point", zorder=5)
+        ax.scatter([jx], [jy], s=42, marker="^", label="JSON point", zorder=6)
+        ax.plot([jx, rx], [jy, ry], linestyle="--", linewidth=1.2, zorder=4)
+
+        # 标注偏移
+        dist = ((jx - rx) ** 2 + (jy - ry) ** 2) ** 0.5
+        midx, midy = (jx + rx) / 2.0, (jy + ry) / 2.0
+        ax.text(midx, midy, f"{dist:.3f} m", fontsize=9,
+                bbox=dict(facecolor="white", alpha=0.8, edgecolor="none"))
+
+        ax.set_xlim(xmin, xmax);
+        ax.set_ylim(ymin, ymax)
+        ax.set_aspect("equal", adjustable="box")
+        ax.grid(True, linestyle=":", alpha=0.5)
+        ax.set_title("Local XODR/JSON distribution (zoom)")
+        ax.legend(loc="best", fontsize=8)
+        fig.tight_layout()
+        fig.savefig(save_path, bbox_inches="tight")
+        plt.close(fig)
+
+    # === PATCH END ===
+
     # ---------- HTML ----------
     def _rel_to_html(self, asset_path, html_dir) -> str:
         """把任意文件路径转成相对 HTML 目录的路径（统一成 POSIX 斜杠，防止 Windows 反斜杠）"""
@@ -1477,7 +1626,11 @@ class QualityChecker:
         except Exception:
             rel = str(p)
         return Path(rel).as_posix()
+
     def _generate_html_report(self, data: Dict) -> str:
+        from pathlib import Path
+        import os
+
         json_file = _html.escape(data['json_file'])
         xodr_file = _html.escape(data['xodr_file'])
         threshold = data['threshold']
@@ -1507,8 +1660,7 @@ class QualityChecker:
 
         objc = report.details.get('object_consistency_v14', {})
         sigc = report.details.get('signal_consistency_v14', {})
-        eval_points = report.details.get(
-            'curve_eval_points_v14', [])  # 明细（按 bound 指派，用于打分）
+        eval_points = report.details.get('curve_eval_points_v14', [])  # 明细（按 bound 指派，用于打分）
 
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -1525,25 +1677,22 @@ class QualityChecker:
                 return '—'
             return f"{v:.1%}" if pct else f"{v:.{nd}f}"
 
-        #v1.7更新html依据reports/figures路径找图
-        # HTML 就保存在 reports/ 里，所以转相对路径时的起点就是 reports 目录本身
+        # v1.7 更新：HTML 依据 reports/figures 路径找图
         html_dir = self.reports_dir
 
         def _img(abs_path):
             """把图片绝对路径转相对 HTML 目录，再输出统一样式的 <img> 标签。"""
             if not abs_path:
                 return ""
-            rel = self._rel_to_html(abs_path, html_dir)  # 复用上面的工具函数
+            rel = self._rel_to_html(abs_path, html_dir)
             return (
                 f'<img src="{_html.escape(rel)}" '
                 f'style="display:block;max-width:100%;border:1px solid #eee;'
                 f'border-radius:8px;margin:10px 0;">'
             )
 
-        # === 原来的两行，改成用 _img(...) ===
-        viz_img_html = _img(viz_path)  # “分布 & 偏移热力（示意）”等
-        viz_outline_html = _img(viz_outline)  # “对象/标识一致性（轮廓）”等
-
+        viz_img_html = _img(viz_path)
+        viz_outline_html = _img(viz_outline)
 
         # 完整性表格行
         comp_table_rows = f"""
@@ -1552,6 +1701,103 @@ class QualityChecker:
           <tr><td>物体（objects）</td><td class="num">{objs_info.get('json_count', '—')}</td><td class="num">{objs_info.get('xodr_count', '—')}</td><td class="num">{objs_info.get('score', 0):.2f}</td></tr>
           <tr><td>标识（sign → signal）</td><td class="num">{signs_info.get('json_count', '—')}</td><td class="num">{signs_info.get('xodr_count', '—')}</td><td class="num">{signs_info.get('score', 0):.2f}</td></tr>
         """
+
+        # ====== NEW: 构造“边界匹配明细”表的行（主行 + 隐藏图片行） ======
+        # 目录准备：figures/alarms/ 下落图；HTML 从 reports/ 相对引用
+        figures_dir = getattr(self, "figures_dir", Path("figures"))
+        zoom_dir = Path(figures_dir) / "alarms"
+        zoom_dir.mkdir(parents=True, exist_ok=True)
+
+        boundaries_map = getattr(self, "boundaries_map", None)  # 可无：{bound_id: [(x,y), ...]}
+
+        def _to_float(v):
+            try:
+                return float(v)
+            except Exception:
+                return None
+
+        eval_rows_html_parts = []
+        #v1.8 对点先用通过/否状态进行排序
+        eval_points_sorted = sorted(
+            eval_points,
+            key=lambda r: (-(r.get('d_use') if r.get('d_use') is not None else -1e9))
+        )
+
+        for idx, rec in enumerate(eval_points_sorted[:max_rows], 1):
+            typ = rec.get('type', 'bound')
+            bound_id = rec.get('bound_id', '')
+
+            # === v1.8 字段 ===
+            jx = rec.get('x');
+            jy = rec.get('y')
+            nn_pt = rec.get('nn_point')  # (x,y) or None
+            assign_pt = rec.get('assign_point')  # (x,y) or None
+            offset_m = rec.get('d_assign')  # 指派距离 or None
+            decision = rec.get('status', '')  # '通过'/'警告'/'失败'
+            d_use = rec.get('d_use', None)
+
+            # 只对告警点做局部图
+            is_alarm = (str(decision) in ('警告', '失败'))  # 或者：is_alarm = (float(d_use or -1) > float(threshold))
+
+            # 用来示意/连线的 XODR 点（优先指派）
+            xodr_xy_used = assign_pt or nn_pt
+            rx = (xodr_xy_used[0] if xodr_xy_used else None)
+            ry = (xodr_xy_used[1] if xodr_xy_used else None)
+
+            # 可选：边界折线/邻域
+            bound_poly = None
+            if boundaries_map is not None and bound_id in boundaries_map:
+                bound_poly = boundaries_map.get(bound_id)
+            json_neighbors = rec.get('json_neighbors')
+            xodr_neighbors = rec.get('xodr_neighbors')
+
+            # 表格展示的小工具
+            def _fmt_xy(pt):
+                if not pt or pt[0] is None or pt[1] is None:
+                    return "(—, —)"
+                return f"({float(pt[0]):.3f}, {float(pt[1]):.3f})"
+
+            row_id = f"alarm_detail_row_{idx}"
+
+            # —— 主行（所有点都显示主行）——
+            eval_rows_html_parts.append(f"""
+              <tr>
+                <td class="num">{idx}</td>
+                <td>{_html.escape(str(typ))}</td>
+                <td>{_html.escape(str(bound_id))}</td>
+                <td>({'—' if jx is None else f"{float(jx):.3f}"}, {'—' if jy is None else f"{float(jy):.3f}"})</td>
+                <td>{_fmt_xy(xodr_xy_used)}</td>
+                <td class="num">{'—' if offset_m is None else f"{float(offset_m):.3f}"}</td>
+                <td>{_html.escape(str(decision))}</td>
+                <td>""" + (f"<span class='alarm-toggle' onclick=\"toggleAlarmRow('{row_id}')\">展开/收起</span>"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         if is_alarm else "—") + """</td>
+              </tr>
+            """)
+
+            # —— 仅为告警点渲染折叠行 + 生成图片 ——
+            if is_alarm and (jx is not None and jy is not None and rx is not None and ry is not None):
+                img_name = f"alarm_{idx:04d}.png"
+                img_abs = zoom_dir / img_name
+                # 注意：只有告警点才会调用绘图，显著减少耗时
+                self._plot_alarm_zoom(
+                    json_xy=(float(jx), float(jy)),
+                    xodr_xy=(float(rx), float(ry)),
+                    save_path=img_abs,
+                    bound_polyline=bound_poly,
+                    json_neighbors=json_neighbors,
+                    xodr_neighbors=xodr_neighbors,
+                    pad=3.0
+                )
+                img_tag = _img(str(img_abs))
+                eval_rows_html_parts.append(f"""
+                  <tr id="{row_id}" class="alarm-detail-row">
+                    <td colspan="8" style="background:#fafafa;">
+                      <div style="padding:8px 12px;">{img_tag}</div>
+                    </td>
+                  </tr>
+                """)
+        # 拼接
+        eval_rows_html = "".join(eval_rows_html_parts)
 
         # 对象/标识摘要卡数据
         obj_kpi_score = fmt(objc.get('score'), pct=True)
@@ -1586,7 +1832,18 @@ class QualityChecker:
       .footer {{ color:#777; font-size: 12px; margin-top: 28px; }}
       .badge {{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid transparent; }}
       .badge.tag {{ background:#eef; color:#225; border-color:#dde; }}
+      /* NEW: 告警明细折叠样式 */
+      .alarm-toggle {{ cursor: pointer; color: #0066cc; text-decoration: underline; }}
+      .alarm-detail-row {{ display: none; }}
+      .alarm-img {{ max-width: 640px; border: 1px solid #ddd; border-radius: 6px; }}
     </style>
+    <script>
+    function toggleAlarmRow(id) {{
+      var row = document.getElementById(id);
+      if (!row) return;
+      row.style.display = (row.style.display === 'none' || row.style.display === '') ? 'table-row' : 'none';
+    }}
+    </script>
     </head>
     <body>
     <div class="container">
@@ -1663,7 +1920,7 @@ class QualityChecker:
         <div class="muted">判定规则：阈值 <b>outline_tol = {outline_tol:.3f} m</b>；均值 ≤ tol → <b>通过</b>；≤ 2·tol → <b>警告</b>；其余 → <b>失败</b>；任一侧缺失 → <b>缺失</b>。</div>
       </div>
 
-      <!-- 精简后的：按 bound 指派（用于打分）的明细表 -->
+      <!-- NEW: 按 bound 指派（用于打分）的明细表 + 行下折叠局部图 -->
       <h2>边界匹配明细（按 bound 指派，用于打分，前 {max_rows} 条）</h2>
       <div class="card">
         <table>
@@ -1676,10 +1933,11 @@ class QualityChecker:
               <th>最近 XODR 坐标 (x, y)（示意）</th>
               <th class="num">偏移 (m)</th>
               <th>判定</th>
+              <th>局部分布</th>
             </tr>
           </thead>
           <tbody>
-            {self._build_assign_detail_rows(eval_points, max_rows)}
+            {eval_rows_html}
           </tbody>
         </table>
         <div class="muted">注：偏移 (m) 为按 bound 指派的距离；若某点未能指派显示 “—”。最近 XODR 坐标仅用于可视化示意，不参与打分。</div>
