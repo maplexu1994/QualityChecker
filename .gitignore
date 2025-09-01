@@ -2,8 +2,8 @@
 .idea/
 
 # 生成工件（可再生）
-figures/**
-reports/**
+!figures/**
+!reports/**
 runs/**
 
 # 大体量原始数据（样本例外）

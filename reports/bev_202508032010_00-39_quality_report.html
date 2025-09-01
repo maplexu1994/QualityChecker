@@ -1,0 +1,922 @@
+<!doctype html>
+    <html lang="zh-CN">
+    <head>
+    <meta charset="utf-8" />
+    <title>JSON→XODR 质检报告</title>
+    <style>
+      html,body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans CJK SC","Microsoft YaHei","PingFang SC",sans-serif;color:#222; }
+      .container { max-width: 1100px; margin: 32px auto; padding: 0 16px; }
+      h1 { font-size: 26px; margin: 0 0 6px; }
+      h2 { font-size: 20px; margin: 28px 0 12px; border-left:4px solid #555; padding-left:8px; }
+      h3 { font-size: 16px; margin: 18px 0 10px; }
+      .meta,.muted { color:#666; font-size: 13px; }
+      .grid3 { display:grid; grid-template-columns: repeat(3,1fr); gap:12px; }
+      .grid2 { display:grid; grid-template-columns: repeat(2,1fr); gap:12px; }
+      .card { border:1px solid #e6e6e6; border-radius:10px; padding:12px 14px; background:#fff; }
+      .kpi { font-size: 22px; font-weight:600; }
+      .ok { color:#138000; } .warn { color:#d97706; } .bad { color:#b91c1c; }
+      table { width:100%; border-collapse: collapse; font-size: 13px; }
+      th,td { border-bottom:1px solid #eee; padding:8px 10px; text-align:left; }
+      th { background:#fafafa; }
+      td.num,th.num { text-align:right; font-variant-numeric: tabular-nums; }
+      .imgwrap { text-align:center; margin: 14px 0 6px; }
+      .warning-list { margin:6px 0 0 16px; }
+      .legend { color:#555; font-size: 13px; }
+      .footer { color:#777; font-size: 12px; margin-top: 28px; }
+      .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid transparent; }
+      .badge.tag { background:#eef; color:#225; border-color:#dde; }
+      /* NEW: 告警明细折叠样式 */
+      .alarm-toggle { cursor: pointer; color: #0066cc; text-decoration: underline; }
+      .alarm-detail-row { display: none; }
+      .alarm-img { max-width: 640px; border: 1px solid #ddd; border-radius: 6px; }
+    </style>
+    <script>
+    function toggleAlarmRow(id) {
+      var row = document.getElementById(id);
+      if (!row) return;
+      row.style.display = (row.style.display === 'none' || row.style.display === '') ? 'table-row' : 'none';
+    }
+    </script>
+    </head>
+    <body>
+    <div class="container">
+
+      <h1>JSON → XODR 质检报告</h1>
+      <div class="meta">生成时间：2025-09-01 17:23:51</div>
+      <div class="meta">JSON 文件：data\inputs\bev_202508032010_00-39.json</div>
+      <div class="meta">XODR 文件：data\inputs\bev_202508032010_00-39.xodr</div>
+
+      <h2>摘要</h2>
+      <div class="grid3">
+        <div class="card">
+          <div class="muted">完整性得分</div>
+          <div class="kpi">100.0%</div>
+          <div class="legend">依据：车道/边界/物体/标识数量对比</div>
+        </div>
+        <div class="card">
+          <div class="muted">一致性得分（曲线，v1.4）</div>
+          <div class="kpi">83.4%</div>
+          <div class="legend">按车道分组 + 跨路段拼接 + 边界指派；阈值 0.100 m</div>
+        </div>
+        <div class="card">
+          <div class="muted">告警数量</div>
+          <div class="kpi warn">1</div>
+          <div class="legend">超阈值点：1/92</div>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:12px;">
+        <div class="card">
+          <div class="muted">对象一致性（轮廓）</div>
+          <div class="kpi">99.8%</div>
+          <div class="legend">均值: 0.001 m；最大: 0.001 m；通过/警告/失败/缺失: 9/0/0/0</div>
+        </div>
+        <div class="card">
+          <div class="muted">标识一致性（轮廓）</div>
+          <div class="kpi">94.4%</div>
+          <div class="legend">均值: 0.022 m；最大: 0.053 m；通过/警告/失败/缺失: 2/0/0/0</div>
+        </div>
+      </div>
+
+      <h2>完整性检查</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>要素</th><th class="num">JSON 数量</th><th class="num">XODR 数量</th><th class="num">子分数</th></tr>
+          </thead>
+          <tbody>
+            
+          <tr><td>车道（driving）</td><td class="num">13</td><td class="num">13</td><td class="num">1.00</td></tr>
+          <tr><td>边界（唯一ID vs 拓扑边界）</td><td class="num">22</td><td class="num">22</td><td class="num">1.00</td></tr>
+          <tr><td>物体（objects）</td><td class="num">9</td><td class="num">9</td><td class="num">1.00</td></tr>
+          <tr><td>标识（sign → signal）</td><td class="num">2</td><td class="num">2</td><td class="num">1.00</td></tr>
+        
+          </tbody>
+        </table>
+        <div class="muted">说明：XODR 数量可能大于 JSON（例如拓扑边界拆分、道路拼接等）；子分数按 min(XODR/JSON, 1.0) 计算。</div>
+      </div>
+
+      <h2>一致性检查（曲线） <span class="badge tag">v1.4 分组启用</span></h2>
+      <div class="grid3">
+        <div class="card">
+          <div class="muted">平均偏移</div><div class="kpi">0.017 m</div>
+          <div class="legend">匹配车道：13；映射边界：20</div>
+        </div>
+        <div class="card">
+          <div class="muted">最大 / 最小偏移</div><div class="kpi">0.143 / 0.000 m</div>
+        </div>
+        <div class="card">
+          <div class="muted">参与点数</div><div class="kpi">92</div>
+          <div class="legend">仅包含 JSON 边界点</div>
+        </div>
+      </div>
+      <div class="card"><div class="muted">分布 & 偏移热力（示意）</div><div class="imgwrap"><img src="../figures/bev_202508032010_00-39_visualization.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div></div>
+
+      <h2>对象/标识一致性（轮廓）</h2>
+      <div class="card">
+        <div class="imgwrap"><img src="../figures/bev_202508032010_00-39_outline_overlay.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+        <div class="muted">判定规则：阈值 <b>outline_tol = 0.200 m</b>；均值 ≤ tol → <b>通过</b>；≤ 2·tol → <b>警告</b>；其余 → <b>失败</b>；任一侧缺失 → <b>缺失</b>。</div>
+      </div>
+
+      <!-- NEW: 按 bound 指派（用于打分）的明细表 + 行下折叠局部图 -->
+      <h2>边界匹配明细（按 bound 指派，用于打分，前 200 条）</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">序号</th>
+              <th>类型</th>
+              <th>Bound ID</th>
+              <th>JSON 坐标 (x, y)</th>
+              <th>最近 XODR 坐标 (x, y)（示意）</th>
+              <th class="num">偏移 (m)</th>
+              <th>判定</th>
+              <th>局部分布</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+              <tr>
+                <td class="num">1</td>
+                <td>bound</td>
+                <td>2</td>
+                <td>(52.553, 0.773)</td>
+                <td>(52.410, 0.772)</td>
+                <td class="num">0.143</td>
+                <td>警告</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_1')">展开/收起</span></td>
+              </tr>
+              <tr id="alarm_detail_row_1" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;"><img src="../figures/alarms/alarm_0001.png" style="display:block;max-width:100%;border:1px solid #eee;border-radius:8px;margin:10px 0;"></div>
+                </td>
+              </tr>
+            
+                  <tr>
+                    <td class="num">2</td>
+                    <td>bound</td>
+                    <td>2</td>
+                    <td>(8.163, 1.967)</td>
+                    <td>(8.163, 1.967)</td>
+                    <td class="num">0.001</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">3</td>
+                    <td>bound</td>
+                    <td>2</td>
+                    <td>(33.822, 1.372)</td>
+                    <td>(33.814, 1.372)</td>
+                    <td class="num">0.009</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">4</td>
+                    <td>bound</td>
+                    <td>2</td>
+                    <td>(22.035, 1.712)</td>
+                    <td>(22.046, 1.695)</td>
+                    <td class="num">0.021</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">5</td>
+                    <td>bound</td>
+                    <td>2</td>
+                    <td>(43.950, 0.989)</td>
+                    <td>(43.975, 0.989)</td>
+                    <td class="num">0.025</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+                  <tr>
+                    <td class="num">6</td>
+                    <td>bound</td>
+                    <td>2</td>
+                    <td>(50.530, 0.763)</td>
+                    <td>(50.553, 0.774)</td>
+                    <td class="num">0.026</td>
+                    <td>通过</td>
+                    <td>—</td>
+                  </tr>
+                
+              <tr>
+                <td class="num">7</td>
+                <td>bound</td>
+                <td>3</td>
+                <td colspan="1">全部通过（7 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_3')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_3" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(60.971, 0.946)</td><td>(60.981, 0.915)</td><td class='num'>0.033</td></tr><tr><td class='num'>2</td><td>(55.141, 0.733)</td><td>(55.120, 0.753)</td><td class='num'>0.029</td></tr><tr><td class='num'>3</td><td>(77.822, 2.691)</td><td>(77.801, 2.679)</td><td class='num'>0.025</td></tr><tr><td class='num'>4</td><td>(69.226, 1.585)</td><td>(69.213, 1.582)</td><td class='num'>0.014</td></tr><tr><td class='num'>5</td><td>(52.553, 0.773)</td><td>(52.561, 0.769)</td><td class='num'>0.008</td></tr><tr><td class='num'>6</td><td>(64.077, 1.116)</td><td>(64.079, 1.115)</td><td class='num'>0.002</td></tr><tr><td class='num'>7</td><td>(81.865, 3.244)</td><td>(81.865, 3.244)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">8</td>
+                <td>bound</td>
+                <td>5</td>
+                <td colspan="1">全部通过（7 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_5')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_5" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(67.654, 2.882)</td><td>(67.639, 2.849)</td><td class='num'>0.037</td></tr><tr><td class='num'>2</td><td>(73.936, 3.136)</td><td>(73.916, 3.109)</td><td class='num'>0.033</td></tr><tr><td class='num'>3</td><td>(60.696, 2.572)</td><td>(60.719, 2.550)</td><td class='num'>0.032</td></tr><tr><td class='num'>4</td><td>(80.950, 3.333)</td><td>(80.935, 3.310)</td><td class='num'>0.028</td></tr><tr><td class='num'>5</td><td>(79.851, 3.305)</td><td>(79.861, 3.303)</td><td class='num'>0.010</td></tr><tr><td class='num'>6</td><td>(52.493, 2.232)</td><td>(52.493, 2.232)</td><td class='num'>0.000</td></tr><tr><td class='num'>7</td><td>(81.865, 3.244)</td><td>(81.865, 3.244)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">9</td>
+                <td>bound</td>
+                <td>6</td>
+                <td colspan="1">全部通过（3 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_6')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_6" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(51.554, 6.157)</td><td>(51.570, 6.152)</td><td class='num'>0.017</td></tr><tr><td class='num'>2</td><td>(52.332, 6.106)</td><td>(52.332, 6.106)</td><td class='num'>0.000</td></tr><tr><td class='num'>3</td><td>(29.726, 6.941)</td><td>(29.726, 6.941)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">10</td>
+                <td>bound</td>
+                <td>7</td>
+                <td colspan="1">全部通过（6 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_7')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_7" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(63.674, 5.357)</td><td>(63.693, 5.322)</td><td class='num'>0.040</td></tr><tr><td class='num'>2</td><td>(75.234, 4.637)</td><td>(75.219, 4.615)</td><td class='num'>0.027</td></tr><tr><td class='num'>3</td><td>(70.314, 4.877)</td><td>(70.333, 4.860)</td><td class='num'>0.026</td></tr><tr><td class='num'>4</td><td>(57.634, 5.757)</td><td>(57.647, 5.748)</td><td class='num'>0.016</td></tr><tr><td class='num'>5</td><td>(81.745, 4.118)</td><td>(81.745, 4.118)</td><td class='num'>0.000</td></tr><tr><td class='num'>6</td><td>(52.332, 6.106)</td><td>(52.332, 6.106)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">11</td>
+                <td>bound</td>
+                <td>8</td>
+                <td colspan="1">全部通过（3 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_8')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_8" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(43.953, 9.747)</td><td>(43.935, 9.721)</td><td class='num'>0.032</td></tr><tr><td class='num'>2</td><td>(29.870, 10.346)</td><td>(29.870, 10.346)</td><td class='num'>0.000</td></tr><tr><td class='num'>3</td><td>(52.200, 9.295)</td><td>(52.200, 9.295)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">12</td>
+                <td>bound</td>
+                <td>9</td>
+                <td colspan="1">全部通过（4 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_9')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_9" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(71.689, 8.049)</td><td>(71.667, 8.027)</td><td class='num'>0.031</td></tr><tr><td class='num'>2</td><td>(54.972, 9.144)</td><td>(54.974, 9.144)</td><td class='num'>0.002</td></tr><tr><td class='num'>3</td><td>(81.316, 7.256)</td><td>(81.316, 7.256)</td><td class='num'>0.001</td></tr><tr><td class='num'>4</td><td>(52.200, 9.295)</td><td>(52.200, 9.295)</td><td class='num'>0.001</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">13</td>
+                <td>bound</td>
+                <td>19</td>
+                <td colspan="1">全部通过（5 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_19')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_19" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(44.149, -2.632)</td><td>(44.145, -2.587)</td><td class='num'>0.045</td></tr><tr><td class='num'>2</td><td>(22.580, -1.872)</td><td>(22.593, -1.889)</td><td class='num'>0.021</td></tr><tr><td class='num'>3</td><td>(33.466, -2.277)</td><td>(33.453, -2.273)</td><td class='num'>0.013</td></tr><tr><td class='num'>4</td><td>(52.705, -2.889)</td><td>(52.705, -2.889)</td><td class='num'>0.001</td></tr><tr><td class='num'>5</td><td>(8.095, -1.716)</td><td>(8.095, -1.716)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">14</td>
+                <td>bound</td>
+                <td>21</td>
+                <td colspan="1">全部通过（4 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_21')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_21" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(22.677, -5.447)</td><td>(22.693, -5.460)</td><td class='num'>0.020</td></tr><tr><td class='num'>2</td><td>(44.177, -6.220)</td><td>(44.165, -6.210)</td><td class='num'>0.015</td></tr><tr><td class='num'>3</td><td>(8.027, -5.374)</td><td>(8.027, -5.374)</td><td class='num'>0.000</td></tr><tr><td class='num'>4</td><td>(53.011, -6.683)</td><td>(53.011, -6.683)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">15</td>
+                <td>bound</td>
+                <td>26</td>
+                <td colspan="1">全部通过（4 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_26')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_26" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(93.375, 2.965)</td><td>(93.395, 2.921)</td><td class='num'>0.048</td></tr><tr><td class='num'>2</td><td>(99.554, 2.317)</td><td>(99.543, 2.297)</td><td class='num'>0.023</td></tr><tr><td class='num'>3</td><td>(81.745, 4.118)</td><td>(81.747, 4.118)</td><td class='num'>0.002</td></tr><tr><td class='num'>4</td><td>(103.567, 1.824)</td><td>(103.567, 1.824)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">16</td>
+                <td>bound</td>
+                <td>27</td>
+                <td colspan="1">全部通过（6 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_27')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_27" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(75.947, -1.163)</td><td>(75.962, -1.181)</td><td class='num'>0.023</td></tr><tr><td class='num'>2</td><td>(63.390, -2.581)</td><td>(63.397, -2.602)</td><td class='num'>0.022</td></tr><tr><td class='num'>3</td><td>(68.807, -2.075)</td><td>(68.813, -2.079)</td><td class='num'>0.007</td></tr><tr><td class='num'>4</td><td>(55.947, -2.936)</td><td>(55.942, -2.937)</td><td class='num'>0.005</td></tr><tr><td class='num'>5</td><td>(82.351, -0.310)</td><td>(82.351, -0.310)</td><td class='num'>0.000</td></tr><tr><td class='num'>6</td><td>(52.705, -2.889)</td><td>(52.705, -2.889)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">17</td>
+                <td>bound</td>
+                <td>29</td>
+                <td colspan="1">全部通过（6 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_29')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_29" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(56.132, -6.720)</td><td>(56.121, -6.767)</td><td class='num'>0.048</td></tr><tr><td class='num'>2</td><td>(76.723, -4.674)</td><td>(76.708, -4.711)</td><td class='num'>0.039</td></tr><tr><td class='num'>3</td><td>(62.223, -6.447)</td><td>(62.204, -6.459)</td><td class='num'>0.022</td></tr><tr><td class='num'>4</td><td>(68.541, -5.765)</td><td>(68.559, -5.768)</td><td class='num'>0.018</td></tr><tr><td class='num'>5</td><td>(82.845, -3.922)</td><td>(82.845, -3.922)</td><td class='num'>0.001</td></tr><tr><td class='num'>6</td><td>(53.011, -6.683)</td><td>(53.011, -6.683)</td><td class='num'>0.001</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">18</td>
+                <td>bound</td>
+                <td>33</td>
+                <td colspan="1">全部通过（2 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_33')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_33" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(113.808, 1.104)</td><td>(113.808, 1.104)</td><td class='num'>0.000</td></tr><tr><td class='num'>2</td><td>(126.923, 0.174)</td><td>(126.923, 0.174)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">19</td>
+                <td>bound</td>
+                <td>35</td>
+                <td colspan="1">全部通过（3 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_35')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_35" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(123.041, -2.992)</td><td>(123.038, -2.967)</td><td class='num'>0.025</td></tr><tr><td class='num'>2</td><td>(126.793, -3.251)</td><td>(126.792, -3.251)</td><td class='num'>0.001</td></tr><tr><td class='num'>3</td><td>(113.470, -2.300)</td><td>(113.469, -2.300)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">20</td>
+                <td>bound</td>
+                <td>37</td>
+                <td colspan="1">全部通过（4 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_37')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_37" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(118.670, 3.747)</td><td>(118.651, 3.796)</td><td class='num'>0.052</td></tr><tr><td class='num'>2</td><td>(123.086, 3.596)</td><td>(123.100, 3.596)</td><td class='num'>0.014</td></tr><tr><td class='num'>3</td><td>(127.048, 3.445)</td><td>(127.048, 3.445)</td><td class='num'>0.000</td></tr><tr><td class='num'>4</td><td>(114.104, 4.087)</td><td>(114.104, 4.087)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">21</td>
+                <td>bound</td>
+                <td>39</td>
+                <td colspan="1">全部通过（3 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_39')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_39" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(91.123, 6.427)</td><td>(91.098, 6.382)</td><td class='num'>0.051</td></tr><tr><td class='num'>2</td><td>(103.930, 5.125)</td><td>(103.949, 5.123)</td><td class='num'>0.020</td></tr><tr><td class='num'>3</td><td>(81.316, 7.256)</td><td>(81.319, 7.256)</td><td class='num'>0.003</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">22</td>
+                <td>bound</td>
+                <td>40</td>
+                <td colspan="1">全部通过（3 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_40')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_40" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(103.930, 5.125)</td><td>(104.004, 5.117)</td><td class='num'>0.075</td></tr><tr><td class='num'>2</td><td>(108.406, 4.653)</td><td>(108.404, 4.659)</td><td class='num'>0.007</td></tr><tr><td class='num'>3</td><td>(114.104, 4.087)</td><td>(114.104, 4.087)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">23</td>
+                <td>bound</td>
+                <td>41</td>
+                <td colspan="1">全部通过（5 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_41')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_41" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(88.859, -2.992)</td><td>(88.856, -3.054)</td><td class='num'>0.062</td></tr><tr><td class='num'>2</td><td>(99.632, -2.083)</td><td>(99.632, -2.114)</td><td class='num'>0.030</td></tr><tr><td class='num'>3</td><td>(94.495, -2.492)</td><td>(94.501, -2.522)</td><td class='num'>0.030</td></tr><tr><td class='num'>4</td><td>(82.845, -3.922)</td><td>(82.844, -3.922)</td><td class='num'>0.001</td></tr><tr><td class='num'>5</td><td>(103.053, -2.049)</td><td>(103.053, -2.049)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">24</td>
+                <td>bound</td>
+                <td>42</td>
+                <td colspan="1">全部通过（3 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_42')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_42" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(108.670, -1.953)</td><td>(108.660, -1.923)</td><td class='num'>0.031</td></tr><tr><td class='num'>2</td><td>(103.053, -2.049)</td><td>(103.054, -2.049)</td><td class='num'>0.001</td></tr><tr><td class='num'>3</td><td>(113.470, -2.300)</td><td>(113.469, -2.300)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">25</td>
+                <td>bound</td>
+                <td>43</td>
+                <td colspan="1">全部通过（4 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_43')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_43" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(93.010, 0.963)</td><td>(93.024, 0.918)</td><td class='num'>0.047</td></tr><tr><td class='num'>2</td><td>(99.744, 1.723)</td><td>(99.756, 1.697)</td><td class='num'>0.028</td></tr><tr><td class='num'>3</td><td>(103.567, 1.824)</td><td>(103.566, 1.824)</td><td class='num'>0.001</td></tr><tr><td class='num'>4</td><td>(82.351, -0.310)</td><td>(82.352, -0.310)</td><td class='num'>0.001</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">26</td>
+                <td>bound</td>
+                <td>44</td>
+                <td colspan="1">全部通过（2 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_44')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_44" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(113.808, 1.104)</td><td>(113.808, 1.104)</td><td class='num'>0.001</td></tr><tr><td class='num'>2</td><td>(103.567, 1.824)</td><td>(103.567, 1.824)</td><td class='num'>0.000</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+              <tr>
+                <td class="num">27</td>
+                <td>bound</td>
+                <td>49</td>
+                <td colspan="1">全部通过（2 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('pass_group_row_49')">展开/收起</span></td>
+              </tr>
+              <tr id="pass_group_row_49" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td class='num'>1</td><td>(29.569, 3.255)</td><td>(29.570, 3.255)</td><td class='num'>0.001</td></tr><tr><td class='num'>2</td><td>(52.493, 2.232)</td><td>(52.492, 2.232)</td><td class='num'>0.001</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            
+          </tbody>
+        </table>
+        <div class="muted">注：偏移 (m) 为按 bound 指派的距离；若某点未能指派显示 “—”。最近 XODR 坐标仅用于可视化示意，不参与打分。</div>
+      </div>
+
+      <h2>对象轮廓匹配明细（前 200 条）</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">序号</th>
+              <th>JSON 对象ID</th>
+              <th>XODR 对象ID</th>
+              <th class="num">JSON 点数</th>
+              <th class="num">XODR 点数</th>
+              <th class="num">Chamfer 均值 (m)</th>
+              <th class="num">最大 (m)</th>
+              <th>判定</th>
+              <th class="num">得分</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class='num'>0</td><td>polyline_1</td><td>1</td><td class='num'>5</td><td class='num'>5</td><td class='num'>0.001</td><td class='num'>0.001</td><td>通过</td><td class='num'>100%</td></tr><tr><td class='num'>1</td><td>polyline_4</td><td>2</td><td class='num'>13</td><td class='num'>13</td><td class='num'>0.001</td><td class='num'>0.001</td><td>通过</td><td class='num'>100%</td></tr><tr><td class='num'>2</td><td>polyline_45</td><td>3</td><td class='num'>12</td><td class='num'>12</td><td class='num'>0.000</td><td class='num'>0.000</td><td>通过</td><td class='num'>100%</td></tr><tr><td class='num'>3</td><td>polyline_46</td><td>4</td><td class='num'>5</td><td class='num'>5</td><td class='num'>0.001</td><td class='num'>0.001</td><td>通过</td><td class='num'>100%</td></tr><tr><td class='num'>4</td><td>polyline_48</td><td>5</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td>通过</td><td class='num'>100%</td></tr><tr><td class='num'>5</td><td>polyline_50</td><td>6</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td>通过</td><td class='num'>100%</td></tr><tr><td class='num'>6</td><td>1</td><td>7</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td>通过</td><td class='num'>100%</td></tr><tr><td class='num'>7</td><td>2</td><td>8</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td>通过</td><td class='num'>100%</td></tr><tr><td class='num'>8</td><td>5</td><td>9</td><td class='num'>4</td><td class='num'>4</td><td class='num'>0.001</td><td class='num'>0.001</td><td>通过</td><td class='num'>100%</td></tr>
+          </tbody>
+        </table>
+        <div class="muted">注：对象轮廓匹配基于 Chamfer 距离；判定与阈值规则同上。</div>
+      </div>
+
+      <h2>标识轮廓匹配明细（前 200 条）</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">序号</th>
+              <th>JSON 标识ID</th>
+              <th>XODR 标识ID</th>
+              <th class="num">JSON 点数</th>
+              <th class="num">XODR 点数</th>
+              <th class="num">Chamfer 均值 (m)</th>
+              <th class="num">最大 (m)</th>
+              <th>判定</th>
+              <th class="num">得分</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class='num'>0</td><td>3</td><td>1</td><td class='num'>4</td><td class='num'>5</td><td class='num'>0.009</td><td class='num'>0.015</td><td>通过</td><td class='num'>98%</td></tr><tr><td class='num'>1</td><td>4</td><td>2</td><td class='num'>4</td><td class='num'>5</td><td class='num'>0.035</td><td class='num'>0.053</td><td>通过</td><td class='num'>91%</td></tr>
+          </tbody>
+        </table>
+        <div class="muted">注：标识轮廓匹配基于 Chamfer 距离；判定与阈值规则同上。</div>
+      </div>
+
+      <h2>告警列表</h2>
+      <div class="card"><ul class='warning-list'><li>⚠️ 边界点偏移超阈值: (52.553, 0.773) → 0.143m</li></ul></div>
+
+      <div class="footer">
+        曲线一致性阈值：0.100 m；对象/标识轮廓阈值：0.200 m。<br/>
+        本报告采用 v1.4 的“车道中心多候选→跨路段拼接→2×2 指派”，无法指派时回退到全局最近邻用于统计与明细展示。
+      </div>
+
+    </div>
+    </body>
+    </html>

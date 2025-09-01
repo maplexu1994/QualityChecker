@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-JSON to XODR Quality Checker — v1.7
+JSON to XODR Quality Checker — v1.9
 
-变更摘要（相对 v1.6）：
+变更摘要（相对 v1.8）：
 - 功能：
-之后统一文件名QA_json2xodr，删除目录中的冗余项目
-增加_signal_rect_outline_world还原xodr中signal outline，
-更新sign/signal对应可视化
-更新html依据reports/figures路径找图
+把“有问题的点”优先展示；其余“全通过”的 bound 合并成一行，需要时再展开，否则列表太长。
 """
 
 import json
@@ -1630,6 +1627,7 @@ class QualityChecker:
     def _generate_html_report(self, data: Dict) -> str:
         from pathlib import Path
         import os
+        from collections import defaultdict
 
         json_file = _html.escape(data['json_file'])
         xodr_file = _html.escape(data['xodr_file'])
@@ -1702,83 +1700,89 @@ class QualityChecker:
           <tr><td>标识（sign → signal）</td><td class="num">{signs_info.get('json_count', '—')}</td><td class="num">{signs_info.get('xodr_count', '—')}</td><td class="num">{signs_info.get('score', 0):.2f}</td></tr>
         """
 
-        # ====== NEW: 构造“边界匹配明细”表的行（主行 + 隐藏图片行） ======
-        # 目录准备：figures/alarms/ 下落图；HTML 从 reports/ 相对引用
+        # ====== v1.9 NEW: 告警优先 + 通过点分组/折叠 ======
         figures_dir = getattr(self, "figures_dir", Path("figures"))
         zoom_dir = Path(figures_dir) / "alarms"
         zoom_dir.mkdir(parents=True, exist_ok=True)
 
         boundaries_map = getattr(self, "boundaries_map", None)  # 可无：{bound_id: [(x,y), ...]}
 
-        def _to_float(v):
-            try:
-                return float(v)
-            except Exception:
-                return None
+        def _fmt_xy(pt):
+            if not pt or pt[0] is None or pt[1] is None:
+                return "(—, —)"
+            return f"({float(pt[0]):.3f}, {float(pt[1]):.3f})"
 
-        eval_rows_html_parts = []
-        #v1.8 对点先用通过/否状态进行排序
+        def _status_rank(s, d_use, thr):
+            s = str(s or '')
+            if s == '失败': return 0
+            if s == '警告': return 1
+            if s == '通过': return 2
+            # 兜底：用阈值推断
+            try:
+                if d_use is not None and thr is not None:
+                    if float(d_use) > 2.0 * float(thr): return 0
+                    if float(d_use) > float(thr):       return 1
+            except Exception:
+                pass
+            return 3
+
+        # 先稳定排序（告警优先 + 偏移大在前），再切分
         eval_points_sorted = sorted(
             eval_points,
-            key=lambda r: (-(r.get('d_use') if r.get('d_use') is not None else -1e9))
+            key=lambda r: (
+                _status_rank(r.get('status'), r.get('d_use'), threshold),
+                -(r.get('d_use') if r.get('d_use') is not None else -1e9)
+            )
         )
 
-        for idx, rec in enumerate(eval_points_sorted[:max_rows], 1):
+        alarms = [r for r in eval_points_sorted if str(r.get('status')) in ('失败', '警告')]
+        passes = [r for r in eval_points_sorted if str(r.get('status')) == '通过']
+
+        # 告警涉及到的 bound 集合
+        alarm_bounds = {r.get('bound_id') for r in alarms}
+
+        # 通过点：按 bound_id 分桶
+        pass_by_bound = defaultdict(list)
+        for r in passes:
+            pass_by_bound[r.get('bound_id')].append(r)
+
+        pure_pass_bounds = sorted([bid for bid in pass_by_bound.keys() if bid not in alarm_bounds])
+        mixed_pass_bounds = sorted([bid for bid in pass_by_bound.keys() if bid in alarm_bounds])
+
+        eval_rows_html_parts = []
+        row_idx = 0
+
+        # ---------- 1) 告警点：逐点行 + 可展开局部图（仅告警才生成图片） ----------
+        for rec in alarms:
+            if row_idx >= max_rows: break
+            row_idx += 1
             typ = rec.get('type', 'bound')
-            bound_id = rec.get('bound_id', '')
-
-            # === v1.8 字段 ===
-            jx = rec.get('x');
-            jy = rec.get('y')
-            nn_pt = rec.get('nn_point')  # (x,y) or None
-            assign_pt = rec.get('assign_point')  # (x,y) or None
-            offset_m = rec.get('d_assign')  # 指派距离 or None
-            decision = rec.get('status', '')  # '通过'/'警告'/'失败'
-            d_use = rec.get('d_use', None)
-
-            # 只对告警点做局部图
-            is_alarm = (str(decision) in ('警告', '失败'))  # 或者：is_alarm = (float(d_use or -1) > float(threshold))
-
-            # 用来示意/连线的 XODR 点（优先指派）
+            bound_id = rec.get('bound_id', '—')
+            jx, jy = rec.get('x'), rec.get('y')
+            assign_pt = rec.get('assign_point');
+            nn_pt = rec.get('nn_point')
             xodr_xy_used = assign_pt or nn_pt
-            rx = (xodr_xy_used[0] if xodr_xy_used else None)
-            ry = (xodr_xy_used[1] if xodr_xy_used else None)
+            offset_assign = rec.get('d_assign');
+            d_use = rec.get('d_use')
+            decision = rec.get('status', '')
+            offset_m = offset_assign if offset_assign is not None else d_use
 
-            # 可选：边界折线/邻域
+            # 只对告警点画小图
+            img_tag = "<div class='muted'>（该行缺少坐标信息，未生成局部图）</div>"
+            rx = xodr_xy_used[0] if xodr_xy_used else None
+            ry = xodr_xy_used[1] if xodr_xy_used else None
+            row_id = f"alarm_detail_row_{row_idx}"
+
+            # 可选：边界折线/邻域（若你的 rec 有）
             bound_poly = None
             if boundaries_map is not None and bound_id in boundaries_map:
                 bound_poly = boundaries_map.get(bound_id)
             json_neighbors = rec.get('json_neighbors')
             xodr_neighbors = rec.get('xodr_neighbors')
 
-            # 表格展示的小工具
-            def _fmt_xy(pt):
-                if not pt or pt[0] is None or pt[1] is None:
-                    return "(—, —)"
-                return f"({float(pt[0]):.3f}, {float(pt[1]):.3f})"
-
-            row_id = f"alarm_detail_row_{idx}"
-
-            # —— 主行（所有点都显示主行）——
-            eval_rows_html_parts.append(f"""
-              <tr>
-                <td class="num">{idx}</td>
-                <td>{_html.escape(str(typ))}</td>
-                <td>{_html.escape(str(bound_id))}</td>
-                <td>({'—' if jx is None else f"{float(jx):.3f}"}, {'—' if jy is None else f"{float(jy):.3f}"})</td>
-                <td>{_fmt_xy(xodr_xy_used)}</td>
-                <td class="num">{'—' if offset_m is None else f"{float(offset_m):.3f}"}</td>
-                <td>{_html.escape(str(decision))}</td>
-                <td>""" + (f"<span class='alarm-toggle' onclick=\"toggleAlarmRow('{row_id}')\">展开/收起</span>"
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         if is_alarm else "—") + """</td>
-              </tr>
-            """)
-
-            # —— 仅为告警点渲染折叠行 + 生成图片 ——
-            if is_alarm and (jx is not None and jy is not None and rx is not None and ry is not None):
-                img_name = f"alarm_{idx:04d}.png"
+            if (jx is not None and jy is not None and rx is not None and ry is not None):
+                img_name = f"alarm_{row_idx:04d}.png"
                 img_abs = zoom_dir / img_name
-                # 注意：只有告警点才会调用绘图，显著减少耗时
                 self._plot_alarm_zoom(
                     json_xy=(float(jx), float(jy)),
                     xodr_xy=(float(rx), float(ry)),
@@ -1789,15 +1793,110 @@ class QualityChecker:
                     pad=3.0
                 )
                 img_tag = _img(str(img_abs))
+
+            eval_rows_html_parts.append(f"""
+              <tr>
+                <td class="num">{row_idx}</td>
+                <td>{_html.escape(str(typ))}</td>
+                <td>{_html.escape(str(bound_id))}</td>
+                <td>({'—' if jx is None else f"{float(jx):.3f}"}, {'—' if jy is None else f"{float(jy):.3f}"})</td>
+                <td>{_fmt_xy(xodr_xy_used)}</td>
+                <td class="num">{'—' if offset_m is None else f"{float(offset_m):.3f}"}</td>
+                <td>{_html.escape(str(decision))}</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('{row_id}')">展开/收起</span></td>
+              </tr>
+              <tr id="{row_id}" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">{img_tag}</div>
+                </td>
+              </tr>
+            """)
+
+        # ---------- 2) 通过点（混合 bound）：该 bound 有告警 → 通过点逐点列出（按 bound_id 排） ----------
+        for bid in mixed_pass_bounds:
+            for rec in sorted(pass_by_bound[bid], key=lambda r: (r.get('bound_id'), r.get('d_use') or 0.0)):
+                if row_idx >= max_rows: break
+                row_idx += 1
+                typ = rec.get('type', 'bound')
+                bound_id = rec.get('bound_id', '—')
+                jx, jy = rec.get('x'), rec.get('y')
+                assign_pt = rec.get('assign_point');
+                nn_pt = rec.get('nn_point')
+                xodr_xy_used = assign_pt or nn_pt
+                offset_assign = rec.get('d_assign');
+                d_use = rec.get('d_use')
+                decision = rec.get('status', '')
+                offset_m = offset_assign if offset_assign is not None else d_use
+
                 eval_rows_html_parts.append(f"""
-                  <tr id="{row_id}" class="alarm-detail-row">
-                    <td colspan="8" style="background:#fafafa;">
-                      <div style="padding:8px 12px;">{img_tag}</div>
-                    </td>
+                  <tr>
+                    <td class="num">{row_idx}</td>
+                    <td>{_html.escape(str(typ))}</td>
+                    <td>{_html.escape(str(bound_id))}</td>
+                    <td>({'—' if jx is None else f"{float(jx):.3f}"}, {'—' if jy is None else f"{float(jy):.3f}"})</td>
+                    <td>{_fmt_xy(xodr_xy_used)}</td>
+                    <td class="num">{'—' if offset_m is None else f"{float(offset_m):.3f}"}</td>
+                    <td>{_html.escape(str(decision))}</td>
+                    <td>—</td>
                   </tr>
                 """)
-        # 拼接
+            if row_idx >= max_rows: break
+
+        # ---------- 3) 通过点（纯通过 bound）：每个 bound 合并为一行，可展开查看子表 ----------
+        for bid in pure_pass_bounds:
+            if row_idx >= max_rows: break
+            pts = pass_by_bound[bid]
+            # 统计：最大/均值偏移（用 d_use），用来给合并行一个概览
+            d_vals = [p.get('d_use') for p in pts if p.get('d_use') is not None]
+            d_max = max(d_vals) if d_vals else None
+            d_avg = (sum(d_vals) / len(d_vals)) if d_vals else None
+
+            row_idx += 1
+            group_row_id = f"pass_group_row_{bid}"
+            # 合并行（不生成图片，只给展开）
+            eval_rows_html_parts.append(f"""
+              <tr>
+                <td class="num">{row_idx}</td>
+                <td>bound</td>
+                <td>{_html.escape(str(bid))}</td>
+                <td colspan="1">全部通过（{len(pts)} 点）</td>
+                <td>—</td>
+                <td class="num">——</td>
+                <td>通过</td>
+                <td><span class="alarm-toggle" onclick="toggleAlarmRow('{group_row_id}')">展开/收起</span></td>
+              </tr>
+              <tr id="{group_row_id}" class="alarm-detail-row">
+                <td colspan="8" style="background:#fafafa;">
+                  <div style="padding:8px 12px;">
+                    <table style="width:100%; font-size:12px;">
+                      <thead>
+                        <tr>
+                          <th class="num" style="width:60px;">#</th>
+                          <th>JSON 坐标 (x, y)</th>
+                          <th>最近 XODR 坐标（示意）</th>
+                          <th class="num">偏移 (m)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {''.join([
+                f"<tr>"
+                f"<td class='num'>{k + 1}</td>"
+                f"<td>({float(p.get('x')):.3f}, {float(p.get('y')):.3f})</td>"
+                f"<td>{_fmt_xy((p.get('assign_point') or p.get('nn_point')))}</td>"
+                f"<td class='num'>{fmt(p.get('d_use'))}</td>"
+                f"</tr>"
+                for k, p in enumerate(sorted(pts, key=lambda r: (r.get('d_use') or 0.0), reverse=True))
+            ])}
+                      </tbody>
+                    </table>
+                    <div class="muted">注：此 bound 全部通过，仅为需要时展开查看细节。</div>
+                  </div>
+                </td>
+              </tr>
+            """)
+
         eval_rows_html = "".join(eval_rows_html_parts)
+        # ====== /1.9 NEW ======
 
         # 对象/标识摘要卡数据
         obj_kpi_score = fmt(objc.get('score'), pct=True)
