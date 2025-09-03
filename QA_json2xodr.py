@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-JSON to XODR Quality Checker — v1.9
+JSON to XODR Quality Checker — v2.0
 
-变更摘要（相对 v1.8）：
-- 功能：
-把“有问题的点”优先展示；其余“全通过”的 bound 合并成一行，需要时再展开，否则列表太长。
+变更摘要（相对 v1.9）：
+- 修复：
+1）XODR 的 signal 轮廓在解析阶段被“闭合”（首尾重复一个点），把“首尾相同”的闭合点去重后再统计点数
+2）将XODR/JSON邻域（NEI_CAP）最大保留点数默认值从180调整为2000
+
 """
 
 import json
@@ -744,8 +746,8 @@ class QualityChecker:
         # 预备全局最近邻点集（仅在需要时）-v1.8更新
         # ========= v1.8NEW: 邻域配置 =========
         NEI_RADIUS = 4.0  # 邻域半径（米）建议 3~6 之间看密度
-        JSON_NEI_CAP = 120  # JSON 邻域最大保留点数
-        XODR_NEI_CAP = 180  # XODR 邻域最大保留点数
+        JSON_NEI_CAP = 5000  # JSON 邻域最大保留点数
+        XODR_NEI_CAP = 5000  # XODR 邻域最大保留点数
 
         # ========= NEW: 为 JSON 边界点 & XODR 全部点 建 KDTree =========
         import numpy as _np
@@ -1199,6 +1201,10 @@ class QualityChecker:
         return '失败'
 
     def _objects_signals_consistency(self):
+        #V2.0fix: 把“首尾相同”的闭合点去重后再统计点数
+        def _open_len(P):
+            return len(P) - 1 if (len(P) >= 2 and P[0] == P[-1]) else len(P)
+
         # objects
         j_objs = self._json_objects()
         x_objs = self._xodr_objects_world()
@@ -1229,7 +1235,7 @@ class QualityChecker:
             else:
                 cnt_missing_o += 1
             items_obj.append({'json_id': j['json_id'], 'xodr_id': (x['xodr_id'] if x else None),
-                              'json_pts': len(A), 'xodr_pts': (ch['nB'] if B else 0),
+                              'json_pts': _open_len(A),'xodr_pts': (_open_len(B) if B else 0), #v2.0fix
                               'chamfer_mean': ch['mean'], 'chamfer_max': ch['max'],
                               'outline_status': status, 'item_score': score_i})
         obj_score = float(np.mean(per_scores_obj)) if per_scores_obj else None
@@ -1269,7 +1275,7 @@ class QualityChecker:
             else:
                 cnt_missing_s += 1
             items_sig.append({'json_id': j['json_id'], 'xodr_id': (x['xodr_id'] if x else None),
-                              'json_pts': len(A), 'xodr_pts': (ch['nB'] if B else 0),
+                              'json_pts': _open_len(A),'xodr_pts': (_open_len(B) if B else 0),#v2.0fix
                               'chamfer_mean': ch['mean'], 'chamfer_max': ch['max'],
                               'outline_status': status, 'item_score': score_i})
         sig_score = float(np.mean(per_scores_sig)) if per_scores_sig else None
@@ -2238,8 +2244,8 @@ class QualityChecker:
 if __name__ == '__main__':
     starttime = datetime.now()
     checker = QualityChecker(
-        json_file="./data/inputs/label3.json",
-        xodr_file="./data/inputs/label3.xodr",
+        json_file="./data/inputs/bev_202508032010_00-39.json",
+        xodr_file="./data/inputs/bev_202508032010_00-39.xodr",
         threshold=0.1,     # 曲线一致性（边界点）位置阈值
         outline_tol=0.20   # 轮廓一致性（Chamfer 均值）阈值
     )
