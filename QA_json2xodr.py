@@ -4,6 +4,8 @@
 JSON to XODR Quality Checker — v2.0
 
 变更摘要（相对 v1.9）：
+- 新增:
+1）在做“JSON点→XODR边界”的最近距离计算/指派前，把XODR边界折线在两端按切向方向做可配置长度的外延，这样就能尽量覆盖到 JSON 的首末端点，避免因为“XODR线没画到头”导致的误报。
 - 修复：
 1）XODR 的 signal 轮廓在解析阶段被“闭合”（首尾重复一个点），把“首尾相同”的闭合点去重后再统计点数
 2）将XODR/JSON邻域（NEI_CAP）最大保留点数默认值从180调整为2000
@@ -24,9 +26,12 @@ from datetime import datetime
 from bisect import bisect_left
 
 # ===== 采样与阈值参数 =====
-DEFAULT_SAMPLE_STEP = 0.05
+DEFAULT_SAMPLE_STEP = 0.05 #采样步长，约等于采样精度
 CHAMFER_SAMPLE_CAP = 2000
 BOUND_HEATMAP_CMAP = 'RdYlGn_r'
+
+#v2.0NEW xodr延长长度设置
+BOUND_EXTEND_M = 0.5   # 可配置参数：边界外延长度（米）
 
 JSON_CENTER_RESAMPLE_STEP = 0.2   # JSON 车道中心线重采样步长（米）
 BOUND_RESAMPLE_STEP = 0.2   # JSON 边界折线重采样步长（米）
@@ -53,7 +58,8 @@ class QualityChecker:
     def __init__(self, json_file: str, xodr_file: str,
                  threshold: float = 0.1,    # 曲线一致性判定阈值（边界点 m）
                  outline_tol: float = 0.20,   # 轮廓一致性判定阈值（Chamfer 均值 m）
-                 reports_dir: str = "reports", figures_dir: str = "figures"
+                 reports_dir: str = "reports", figures_dir: str = "figures",
+                 endpoint_extend_m: float = BOUND_EXTEND_M  # XODR 边界端点向切线方向延长的米数；<=0 则关闭
                  ):
         self.json_file = Path(json_file)
         self.xodr_file = Path(xodr_file)
@@ -71,6 +77,9 @@ class QualityChecker:
         self.report = QualityReport()
         self._viz_path: Optional[str] = None
         self._viz_outline_path: Optional[str] = None
+        # === v2.0 NEW (endpoint extension) ===
+        self.endpoint_extend_m = float(endpoint_extend_m)
+
 
         # 参考线缓存
         self._road_cache: Dict[str, Dict[str, List[float]]] = {}
@@ -354,28 +363,61 @@ class QualityChecker:
             res.append((x, y))
         return res
 
-    @staticmethod
-    # def _chamfer_mean(A: List[Tuple[float, float]], B: List[Tuple[float, float]]) -> float:
-    #     if not A or not B:
-    #         return float('inf')
-    #     def nearest(a, arr):
-    #         ax, ay = a
-    #         md = float('inf')
-    #         for bx, by in arr:
-    #             d = math.hypot(ax-bx, ay-by)
-    #             if d < md:
-    #                 md = d
-    #         return md
-    #     def sample(arr):
-    #         if len(arr) <= CHAMFER_SAMPLE_CAP:
-    #             return arr
-    #         idxs = np.linspace(0, len(arr)-1, CHAMFER_SAMPLE_CAP).astype(int)
-    #         return [arr[i] for i in idxs]
-    #     A_ = sample(A)
-    #     B_ = sample(B)
-    #     d1 = [nearest(a, B_) for a in A_]
-    #     d2 = [nearest(b, A_) for b in B_]
-    #     return float(np.mean(d1+d2))
+    # === v2.0 NEW (endpoint extension) ===
+    def _extend_polyline_endpoints(self,
+                                   pts: List[Tuple[float, float]],
+                                   L: float,
+                                   step: float = DEFAULT_SAMPLE_STEP) -> List[Tuple[float, float]]:
+        """
+        将折线两端沿首段/末段切向方向各延长 L 米。
+        为了与采样密度相近，按 step 插入若干个等距外推点。
+        - pts: 原 polyline 点列（至少 2 个）
+        - L:   延长长度（米），<=0 则返回原样
+        - step: 外推点步长（默认用边界重采样步长）
+        """
+        if not pts or len(pts) < 2 or L <= 0:
+            return pts[:] if pts else []
+
+        import math
+
+        # 找“起点方向”
+        i0, i1 = 0, 1
+        while i1 < len(pts) and pts[i1] == pts[i0]:
+            i1 += 1
+        if i1 >= len(pts):
+            return pts[:]
+        vx0, vy0 = pts[i1][0] - pts[i0][0], pts[i1][1] - pts[i0][1]
+        n0 = math.hypot(vx0, vy0)
+        if n0 == 0:
+            return pts[:]
+        vx0, vy0 = vx0 / n0, vy0 / n0
+
+        # 找“终点方向”
+        j0, j1 = len(pts) - 1, len(pts) - 2
+        while j1 >= 0 and pts[j1] == pts[j0]:
+            j1 -= 1
+        if j1 < 0:
+            return pts[:]
+        vx1, vy1 = pts[j0][0] - pts[j1][0], pts[j0][1] - pts[j1][1]
+        n1 = math.hypot(vx1, vy1)
+        if n1 == 0:
+            return pts[:]
+        vx1, vy1 = vx1 / n1, vy1 / n1
+
+        k = max(1, int(math.ceil(L / max(step, 1e-6))))
+
+        # 起点向“负向”外推（先远后近，拼接时更均匀）
+        p0x, p0y = pts[0]
+        start_ext = [(p0x - vx0 * (i * L / k), p0y - vy0 * (i * L / k))
+                     for i in range(k, 0, -1)]
+
+        # 终点向“正向”外推（由近到远）
+        pnx, pny = pts[-1]
+        end_ext = [(pnx + vx1 * (i * L / k), pny + vy1 * (i * L / k))
+                   for i in range(1, k + 1)]
+
+        return start_ext + pts + end_ext
+
     @staticmethod
     def _chamfer_mean(A, B, cap=2000):
         def _sample_cap_np(arr, cap):
@@ -690,7 +732,12 @@ class QualityChecker:
                                          'inner': [], 'outer': []})
                 for kind in ('inner', 'outer'):
                     pts = ed.get(kind, [])
+                    #  === v2.0 NEW (endpoint extension) ===
                     if pts:
+                        if getattr(self, "endpoint_extend_m", 0.0) > 0.0:
+                            pts = self._extend_polyline_endpoints(pts,
+                                                                  self.endpoint_extend_m,
+                                                                  step=DEFAULT_SAMPLE_STEP)
                         g[kind].extend(pts)
 
             if not group_map:
@@ -2244,8 +2291,8 @@ class QualityChecker:
 if __name__ == '__main__':
     starttime = datetime.now()
     checker = QualityChecker(
-        json_file="./data/inputs/bev_202508032010_00-39.json",
-        xodr_file="./data/inputs/bev_202508032010_00-39.xodr",
+        json_file="./data/inputs/bev_202507131320_01-30.json",
+        xodr_file="./data/inputs/bev_202507131320_01-30.xodr",
         threshold=0.1,     # 曲线一致性（边界点）位置阈值
         outline_tol=0.20   # 轮廓一致性（Chamfer 均值）阈值
     )

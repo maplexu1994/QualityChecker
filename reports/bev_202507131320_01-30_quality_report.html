@@ -42,7 +42,7 @@
     <div class="container">
 
       <h1>JSON → XODR 质检报告</h1>
-      <div class="meta">生成时间：2025-09-03 09:51:22</div>
+      <div class="meta">生成时间：2025-09-04 17:04:27</div>
       <div class="meta">JSON 文件：data\inputs\bev_202507131320_01-30.json</div>
       <div class="meta">XODR 文件：data\inputs\bev_202507131320_01-30.xodr</div>
 
@@ -55,7 +55,7 @@
         </div>
         <div class="card">
           <div class="muted">一致性得分（曲线，v1.4）</div>
-          <div class="kpi">55.5%</div>
+          <div class="kpi">63.2%</div>
           <div class="legend">按车道分组 + 跨路段拼接 + 边界指派；阈值 0.100 m</div>
         </div>
         <div class="card">
@@ -99,11 +99,11 @@
       <h2>一致性检查（曲线） <span class="badge tag">v1.4 分组启用</span></h2>
       <div class="grid3">
         <div class="card">
-          <div class="muted">平均偏移</div><div class="kpi">0.045 m</div>
+          <div class="muted">平均偏移</div><div class="kpi">0.037 m</div>
           <div class="legend">匹配车道：3；映射边界：4</div>
         </div>
         <div class="card">
-          <div class="muted">最大 / 最小偏移</div><div class="kpi">0.478 / 0.000 m</div>
+          <div class="muted">最大 / 最小偏移</div><div class="kpi">0.378 / 0.000 m</div>
         </div>
         <div class="card">
           <div class="muted">参与点数</div><div class="kpi">52</div>
@@ -141,8 +141,8 @@
                 <td>bound</td>
                 <td>2</td>
                 <td>(306.282, 26.499)</td>
-                <td>(305.808, 26.437)</td>
-                <td class="num">0.478</td>
+                <td>(305.907, 26.450)</td>
+                <td class="num">0.378</td>
                 <td>失败</td>
                 <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_1')">展开/收起</span></td>
               </tr>
@@ -157,8 +157,8 @@
                 <td>bound</td>
                 <td>3</td>
                 <td>(306.769, 22.680)</td>
-                <td>(306.382, 22.630)</td>
-                <td class="num">0.390</td>
+                <td>(306.481, 22.643)</td>
+                <td class="num">0.290</td>
                 <td>失败</td>
                 <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_2')">展开/收起</span></td>
               </tr>
@@ -173,8 +173,8 @@
                 <td>bound</td>
                 <td>4</td>
                 <td>(8.178, -2.216)</td>
-                <td>(8.515, -2.214)</td>
-                <td class="num">0.337</td>
+                <td>(8.415, -2.215)</td>
+                <td class="num">0.237</td>
                 <td>失败</td>
                 <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_3')">展开/收起</span></td>
               </tr>
@@ -189,9 +189,9 @@
                 <td>bound</td>
                 <td>1</td>
                 <td>(7.430, 8.927)</td>
-                <td>(7.725, 8.929)</td>
-                <td class="num">0.295</td>
-                <td>失败</td>
+                <td>(7.625, 8.928)</td>
+                <td class="num">0.195</td>
+                <td>警告</td>
                 <td><span class="alarm-toggle" onclick="toggleAlarmRow('alarm_detail_row_4')">展开/收起</span></td>
               </tr>
               <tr id="alarm_detail_row_4" class="alarm-detail-row">
@@ -780,7 +780,7 @@
       </div>
 
       <h2>告警列表</h2>
-      <div class="card"><ul class='warning-list'><li>⚠️ 边界点偏移超阈值: (7.430, 8.927) → 0.295m</li><li>⚠️ 边界点偏移超阈值: (306.282, 26.499) → 0.478m</li><li>⚠️ 边界点偏移超阈值: (306.769, 22.680) → 0.390m</li><li>⚠️ 边界点偏移超阈值: (8.178, -2.216) → 0.337m</li></ul></div>
+      <div class="card"><ul class='warning-list'><li>⚠️ 边界点偏移超阈值: (7.430, 8.927) → 0.195m</li><li>⚠️ 边界点偏移超阈值: (306.282, 26.499) → 0.378m</li><li>⚠️ 边界点偏移超阈值: (306.769, 22.680) → 0.290m</li><li>⚠️ 边界点偏移超阈值: (8.178, -2.216) → 0.237m</li></ul></div>
 
       <div class="footer">
         曲线一致性阈值：0.100 m；对象/标识轮廓阈值：0.200 m。<br/>
